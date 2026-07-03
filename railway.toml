@@ -1,6 +1,16 @@
+# API service only — admin web deploys on Vercel.
+# Railway service settings: Root Directory must be empty (repo root).
 [build]
 builder = "dockerfile"
 dockerfilePath = "Dockerfile"
+watchPatterns = [
+  "/apps/api/**",
+  "/packages/database/**",
+  "/packages/shared/**",
+  "/package.json",
+  "/package-lock.json",
+  "/Dockerfile",
+]
 
 [deploy]
 healthcheckPath = "/api/docs"

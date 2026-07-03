@@ -2,18 +2,11 @@ FROM node:20-bookworm-slim
 
 WORKDIR /app
 
-# Install deps (full monorepo lockfile)
-COPY package.json package-lock.json ./
-COPY apps/api/package.json ./apps/api/
-COPY apps/web/package.json ./apps/web/
-COPY packages/database/package.json ./packages/database/
-COPY packages/shared/package.json ./packages/shared/
-
-RUN npm ci --include=dev
-
+# Requires full repo build context (Railway Root Directory must be empty).
 COPY . .
 
-RUN npm run db:generate \
+RUN npm ci --include=dev \
+  && npm run db:generate \
   && npm run build --workspace=@tanjuriel/shared \
   && npm run build --workspace=@tanjuriel/database \
   && npm run build --workspace=@tanjuriel/api \

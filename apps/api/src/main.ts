@@ -41,8 +41,9 @@ async function bootstrap() {
   const port = process.env.PORT || process.env.API_PORT || 4000;
   const host = process.env.API_HOST || '0.0.0.0';
   await app.listen(port, host);
-  console.log(`API running on http://localhost:${port} (LAN: bind ${host}:${port})`);
-  console.log(`Swagger docs: http://localhost:${port}/api/docs`);
+  console.log(`API listening on ${host}:${port}`);
+  console.log(`Health: http://${host}:${port}/api/v1/health`);
+  console.log(`Swagger: http://${host}:${port}/api/docs`);
 }
 
 bootstrap().catch((err) => {

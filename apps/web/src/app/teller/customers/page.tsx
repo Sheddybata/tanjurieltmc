@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Search, UserPlus } from 'lucide-react';
@@ -22,7 +22,7 @@ interface Customer {
   accounts: { accountNumber: string; type: string; balance: number }[];
 }
 
-export default function CustomersPage() {
+function CustomersPageContent() {
   const searchParams = useSearchParams();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [query, setQuery] = useState('');
@@ -119,5 +119,20 @@ export default function CustomersPage() {
         </Card>
       </div>
     </DashboardLayout>
+  );
+}
+
+export default function CustomersPage() {
+  return (
+    <Suspense
+      fallback={
+        <DashboardLayout>
+          <Header title="Customers" subtitle="Search and manage registered customers" />
+          <div className="p-8 text-center text-gray-400">Loading...</div>
+        </DashboardLayout>
+      }
+    >
+      <CustomersPageContent />
+    </Suspense>
   );
 }

@@ -504,7 +504,7 @@ export async function mockRequest<T>(
 
   if (endpoint.startsWith('/settings/settlement-accounts')) {
     if (method === 'PUT') {
-      return { success: true, data: { provider: 'ZENITH', ...MOCK_SETTLEMENT_ACCOUNTS[0] } } as T;
+      return { success: true, data: { ...MOCK_SETTLEMENT_ACCOUNTS[0] } } as T;
     }
     return { success: true, data: MOCK_SETTLEMENT_ACCOUNTS } as T;
   }

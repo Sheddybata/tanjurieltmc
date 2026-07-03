@@ -1,0 +1,20 @@
+node_modules/
+dist/
+.next/
+.turbo/
+.env
+.env.local
+apps/web/.env.local
+uploads/
+*.log
+coverage/
+.DS_Store
+Thumbs.db
+.idea/
+*.iml
+.flutter-plugins-dependencies
+
+# Flutter
+.dart_tool/
+.pub-cache/
+build/

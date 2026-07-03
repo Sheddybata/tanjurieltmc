@@ -1,0 +1,644 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ───────────────────────────────────────────────────────────────────
+
+enum UserRole {
+  ADMIN
+  MANAGER
+  TELLER
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum AccountType {
+  SAVINGS
+  CURRENT
+  FIXED_DEPOSIT
+  LOAN
+}
+
+enum AccountStatus {
+  PENDING
+  ACTIVE
+  DORMANT
+  FROZEN
+  CLOSED
+}
+
+enum TransactionType {
+  DEPOSIT
+  WITHDRAWAL
+  TRANSFER
+  LOAN_DISBURSEMENT
+  LOAN_REPAYMENT
+  FEE
+  REVERSAL
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REVERSED
+}
+
+enum LoanStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  DISBURSED
+  ACTIVE
+  OVERDUE
+  CLOSED
+  WRITTEN_OFF
+}
+
+enum CollateralType {
+  PROPERTY
+  VEHICLE
+  EQUIPMENT
+  GUARANTOR
+  CASH
+  OTHER
+}
+
+enum RegistrationSource {
+  BRANCH
+  MOBILE
+}
+
+enum ApprovalAction {
+  SUBMIT
+  REVIEW
+  APPROVE
+  REJECT
+  DISBURSE
+  RESTRUCTURE
+  WRITE_OFF
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  LOGIN
+  LOGOUT
+  APPROVE
+  REJECT
+  DISBURSE
+  REVERSE
+  EXPORT
+}
+
+enum NibssTransactionType {
+  NIP_TRANSFER
+  NIP_INWARD
+  NIP_OUTWARD
+  BILL_PAYMENT
+  NAME_ENQUIRY
+  BALANCE_ENQUIRY
+}
+
+enum NibssTransactionStatus {
+  INITIATED
+  PENDING
+  SUCCESS
+  FAILED
+  REVERSED
+}
+
+enum CustomerKycStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum PaymentRequestType {
+  DEPOSIT
+  WITHDRAWAL
+  TRANSFER
+  BILL_PAYMENT
+}
+
+enum PaymentRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum PaymentChannel {
+  BANK_TRANSFER
+  CASH
+  MOBILE
+}
+
+enum SettlementProvider {
+  ZENITH
+  OPAY
+  MONIEPOINT
+}
+
+// ─── Core Models ─────────────────────────────────────────────────────────────
+
+model Branch {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  name      String
+  address   String
+  city      String
+  state     String
+  phone     String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users     User[]
+  customers Customer[]
+  accounts  Account[]
+  loans     Loan[]
+
+  @@map("branches")
+}
+
+model User {
+  id           String     @id @default(cuid())
+  employeeId   String     @unique
+  email        String     @unique
+  passwordHash String
+  firstName    String
+  lastName     String
+  phone        String?
+  role         UserRole
+  status       UserStatus @default(ACTIVE)
+  branchId     String?
+  lastLoginAt  DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  branch              Branch?              @relation(fields: [branchId], references: [id])
+  refreshTokens       RefreshToken[]
+  auditLogs           AuditLog[]
+  transactions        Transaction[]        @relation("ProcessedBy")
+  loanApprovals       LoanApproval[]
+  registeredCustomers Customer[]           @relation("RegisteredBy")
+  openedAccounts      Account[]            @relation("OpenedBy")
+  initiatedRequests   PaymentRequest[]     @relation("InitiatedRequests")
+  requestApprovals    PaymentRequestApproval[]
+  notifications       Notification[]
+
+  @@index([role])
+  @@index([branchId])
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+model Customer {
+  id              String            @id @default(cuid())
+  customerNumber  String            @unique
+  firstName       String
+  lastName        String
+  middleName      String?
+  dateOfBirth     DateTime
+  gender          Gender
+  phone           String
+  email           String?
+  bvn             String?           @unique
+  nin             String?           @unique
+  address         String
+  city            String
+  state           String
+  occupation      String?
+  employer        String?
+  monthlyIncome   Decimal?          @db.Decimal(18, 2)
+  kycStatus       CustomerKycStatus @default(PENDING)
+  kycVerifiedAt   DateTime?
+  photoUrl        String?
+  idDocumentUrl   String?
+  paymentRef      String            @unique
+  pinHash         String?
+  appEnabled      Boolean           @default(false)
+  lastAppLoginAt  DateTime?
+  branchId        String
+  registeredById  String
+  registrationSource RegistrationSource @default(BRANCH)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  branch              Branch                 @relation(fields: [branchId], references: [id])
+  registeredBy        User                   @relation("RegisteredBy", fields: [registeredById], references: [id])
+  accounts            Account[]
+  loans               Loan[]
+  paymentRequests     PaymentRequest[]
+  refreshTokens       CustomerRefreshToken[]
+  notifications       Notification[]
+
+  @@index([branchId])
+  @@index([phone])
+  @@index([kycStatus])
+  @@map("customers")
+}
+
+model Account {
+  id             String        @id @default(cuid())
+  accountNumber  String        @unique
+  type           AccountType
+  status         AccountStatus @default(PENDING)
+  balance          Decimal       @default(0) @db.Decimal(18, 2)
+  availableBalance Decimal       @default(0) @db.Decimal(18, 2)
+  heldBalance      Decimal       @default(0) @db.Decimal(18, 2)
+  currency         String        @default("NGN")
+  interestRate   Decimal?      @db.Decimal(5, 4)
+  customerId     String
+  branchId       String
+  openedById     String
+  openedAt       DateTime?
+  closedAt       DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  customer     Customer      @relation(fields: [customerId], references: [id])
+  branch       Branch        @relation(fields: [branchId], references: [id])
+  openedBy     User          @relation("OpenedBy", fields: [openedById], references: [id])
+  transactions    Transaction[]
+  loans           Loan[]
+  paymentRequests PaymentRequest[]
+
+  @@index([customerId])
+  @@index([branchId])
+  @@index([status])
+  @@map("accounts")
+}
+
+model Transaction {
+  id              String            @id @default(cuid())
+  reference       String            @unique
+  type            TransactionType
+  status          TransactionStatus @default(PENDING)
+  amount          Decimal           @db.Decimal(18, 2)
+  balanceBefore   Decimal           @db.Decimal(18, 2)
+  balanceAfter    Decimal           @db.Decimal(18, 2)
+  currency        String            @default("NGN")
+  narration       String?
+  accountId       String
+  processedById   String
+  counterpartyRef  String?
+  externalBankRef  String?
+  paymentRequestId String?           @unique
+  metadata         Json?
+  reversedAt       DateTime?
+  reversalRef      String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  account        Account         @relation(fields: [accountId], references: [id])
+  processedBy    User            @relation("ProcessedBy", fields: [processedById], references: [id])
+  paymentRequest PaymentRequest? @relation(fields: [paymentRequestId], references: [id])
+
+  @@index([accountId])
+  @@index([type])
+  @@index([status])
+  @@index([createdAt])
+  @@map("transactions")
+}
+
+model LoanProduct {
+  id              String   @id @default(cuid())
+  code            String   @unique
+  name            String
+  description     String?
+  minAmount       Decimal  @db.Decimal(18, 2)
+  maxAmount       Decimal  @db.Decimal(18, 2)
+  minTenureMonths Int
+  maxTenureMonths Int
+  interestRate    Decimal  @db.Decimal(5, 4)
+  processingFee   Decimal  @default(0) @db.Decimal(18, 2)
+  isActive        Boolean  @default(true)
+  requiresCollateral Boolean @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  loans Loan[]
+
+  @@map("loan_products")
+}
+
+model Loan {
+  id                String     @id @default(cuid())
+  loanNumber        String     @unique
+  status            LoanStatus @default(DRAFT)
+  principalAmount   Decimal    @db.Decimal(18, 2)
+  interestRate      Decimal    @db.Decimal(5, 4)
+  tenureMonths      Int
+  monthlyPayment    Decimal    @db.Decimal(18, 2)
+  totalRepayable    Decimal    @db.Decimal(18, 2)
+  outstandingBalance Decimal   @default(0) @db.Decimal(18, 2)
+  disbursedAmount   Decimal    @default(0) @db.Decimal(18, 2)
+  purpose           String?
+  collateral        String?
+  collateralType    CollateralType?
+  collateralEstimatedValue Decimal? @db.Decimal(18, 2)
+  collateralPhotoUrl String?
+  guarantorName     String?
+  guarantorPhone    String?
+  collateralVerifiedAt DateTime?
+  collateralVerifiedById String?
+  collateralVerificationNote String?
+  customerId        String
+  productId         String
+  accountId         String?
+  branchId          String
+  submittedAt       DateTime?
+  approvedAt        DateTime?
+  disbursedAt       DateTime?
+  closedAt          DateTime?
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  customer   Customer       @relation(fields: [customerId], references: [id])
+  product    LoanProduct    @relation(fields: [productId], references: [id])
+  account    Account?       @relation(fields: [accountId], references: [id])
+  branch     Branch         @relation(fields: [branchId], references: [id])
+  approvals  LoanApproval[]
+  schedules  LoanSchedule[]
+
+  @@index([customerId])
+  @@index([status])
+  @@index([branchId])
+  @@map("loans")
+}
+
+model LoanApproval {
+  id        String         @id @default(cuid())
+  loanId    String
+  actorId   String
+  action    ApprovalAction
+  comment   String?
+  createdAt DateTime       @default(now())
+
+  loan  Loan @relation(fields: [loanId], references: [id], onDelete: Cascade)
+  actor User @relation(fields: [actorId], references: [id])
+
+  @@index([loanId])
+  @@map("loan_approvals")
+}
+
+model LoanSchedule {
+  id                String    @id @default(cuid())
+  loanId            String
+  installmentNumber Int
+  dueDate           DateTime
+  principalDue      Decimal   @db.Decimal(18, 2)
+  interestDue       Decimal   @db.Decimal(18, 2)
+  totalDue          Decimal   @db.Decimal(18, 2)
+  paidAmount        Decimal   @default(0) @db.Decimal(18, 2)
+  paidAt            DateTime?
+  isPaid            Boolean   @default(false)
+  createdAt         DateTime  @default(now())
+
+  loan Loan @relation(fields: [loanId], references: [id], onDelete: Cascade)
+
+  @@unique([loanId, installmentNumber])
+  @@index([loanId])
+  @@index([dueDate])
+  @@map("loan_schedules")
+}
+
+model AuditLog {
+  id         String      @id @default(cuid())
+  action     AuditAction
+  entityType String
+  entityId   String?
+  userId     String?
+  ipAddress  String?
+  userAgent  String?
+  oldValues  Json?
+  newValues  Json?
+  metadata   Json?
+  createdAt  DateTime    @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([entityType, entityId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+model NibssTransaction {
+  id              String                 @id @default(cuid())
+  reference       String                 @unique
+  sessionId       String?
+  type            NibssTransactionType
+  status          NibssTransactionStatus @default(INITIATED)
+  amount          Decimal?               @db.Decimal(18, 2)
+  senderAccount   String?
+  senderBank      String?
+  beneficiaryAccount String?
+  beneficiaryBank String?
+  beneficiaryName String?
+  narration       String?
+  responseCode    String?
+  responseMessage String?
+  rawRequest      Json?
+  rawResponse     Json?
+  initiatedById   String?
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+
+  @@index([type])
+  @@index([status])
+  @@index([createdAt])
+  @@map("nibss_transactions")
+}
+
+model BillPaymentCategory {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  name        String
+  description String?
+  isActive    Boolean  @default(true)
+  providers   BillPaymentProvider[]
+
+  @@map("bill_payment_categories")
+}
+
+model BillPaymentProvider {
+  id         String   @id @default(cuid())
+  code       String   @unique
+  name       String
+  categoryId String
+  isActive   Boolean  @default(true)
+  category   BillPaymentCategory @relation(fields: [categoryId], references: [id])
+  payments   BillPayment[]
+
+  @@map("bill_payment_providers")
+}
+
+model BillPayment {
+  id            String            @id @default(cuid())
+  reference     String            @unique
+  providerId    String
+  customerRef   String
+  amount        Decimal           @db.Decimal(18, 2)
+  status        TransactionStatus @default(PENDING)
+  responseCode  String?
+  responseMessage String?
+  metadata      Json?
+  processedById String?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  provider BillPaymentProvider @relation(fields: [providerId], references: [id])
+
+  @@index([status])
+  @@index([createdAt])
+  @@map("bill_payments")
+}
+
+model SettlementAccount {
+  id            String             @id @default(cuid())
+  provider      SettlementProvider @unique
+  bankName      String
+  accountName   String
+  accountNumber String
+  isActive      Boolean            @default(true)
+  instructions  String?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  @@map("settlement_accounts")
+}
+
+model PaymentRequest {
+  id                  String               @id @default(cuid())
+  reference           String               @unique
+  type                PaymentRequestType
+  status              PaymentRequestStatus @default(PENDING)
+  amount              Decimal              @db.Decimal(18, 2)
+  channel             PaymentChannel
+  accountId           String
+  customerId          String?
+  initiatedByStaffId  String?
+  settlementProvider  SettlementProvider?
+  beneficiaryBank     String?
+  beneficiaryAccount  String?
+  beneficiaryName     String?
+  billProviderId      String?
+  billCustomerRef     String?
+  customerNote        String?
+  externalBankRef     String?
+  narration           String?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+
+  account       Account                  @relation(fields: [accountId], references: [id])
+  customer      Customer?                @relation(fields: [customerId], references: [id])
+  initiatedBy   User?                    @relation("InitiatedRequests", fields: [initiatedByStaffId], references: [id])
+  approvals     PaymentRequestApproval[]
+  transaction   Transaction?
+
+  @@index([status])
+  @@index([type])
+  @@index([accountId])
+  @@index([createdAt])
+  @@map("payment_requests")
+}
+
+model PaymentRequestApproval {
+  id               String         @id @default(cuid())
+  paymentRequestId String
+  actorId          String
+  action           ApprovalAction
+  comment          String?
+  externalBankRef  String?
+  createdAt        DateTime       @default(now())
+
+  paymentRequest PaymentRequest @relation(fields: [paymentRequestId], references: [id], onDelete: Cascade)
+  actor          User           @relation(fields: [actorId], references: [id])
+
+  @@index([paymentRequestId])
+  @@map("payment_request_approvals")
+}
+
+model Notification {
+  id         String   @id @default(cuid())
+  customerId String?
+  userId     String?
+  title      String
+  body       String
+  type       String
+  entityType String?
+  entityId   String?
+  isRead     Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  customer Customer? @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  user     User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
+  @@index([userId])
+  @@index([isRead])
+  @@map("notifications")
+}
+
+model CustomerRefreshToken {
+  id         String   @id @default(cuid())
+  token      String   @unique
+  customerId String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
+  @@map("customer_refresh_tokens")
+}
+
+model DailySnapshot {
+  id                  String   @id @default(cuid())
+  date                DateTime @unique @db.Date
+  totalDeposits       Decimal  @default(0) @db.Decimal(18, 2)
+  totalWithdrawals    Decimal  @default(0) @db.Decimal(18, 2)
+  totalLoansDisbursed Decimal  @default(0) @db.Decimal(18, 2)
+  totalLoanRepayments Decimal  @default(0) @db.Decimal(18, 2)
+  activeAccounts      Int      @default(0)
+  activeLoans         Int      @default(0)
+  overdueLoans        Int      @default(0)
+  portfolioAtRisk     Decimal  @default(0) @db.Decimal(5, 4)
+  createdAt           DateTime @default(now())
+
+  @@map("daily_snapshots")
+}

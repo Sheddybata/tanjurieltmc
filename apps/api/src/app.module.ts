@@ -13,6 +13,7 @@ import { OperationsModule } from './modules/operations/operations.module';
 import { CustomerAuthModule } from './modules/customer-auth/customer-auth.module';
 import { CustomerPortalModule } from './modules/customer/customer-portal.module';
 import { SettingsModule } from './modules/settings/settings.module';
+import { HealthModule } from './modules/health/health.module';
 import { PrismaModule } from './common/prisma/prisma.module';
 import { AuditInterceptor } from './common/interceptors/audit.interceptor';
 
@@ -34,6 +35,7 @@ import { AuditInterceptor } from './common/interceptors/audit.interceptor';
     CustomerAuthModule,
     CustomerPortalModule,
     SettingsModule,
+    HealthModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

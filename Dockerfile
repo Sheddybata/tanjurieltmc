@@ -15,4 +15,6 @@ RUN npm ci --include=dev \
 ENV NODE_ENV=production
 EXPOSE 4000
 
-CMD ["sh", "-c", "npm run db:migrate:deploy && node apps/api/dist/main.js"]
+RUN chmod +x scripts/railway-start.sh
+
+CMD ["sh", "scripts/railway-start.sh"]

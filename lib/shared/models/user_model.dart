@@ -1,3 +1,5 @@
+import 'package:tanjuriel_microfinance/core/utils/json_utils.dart';
+
 enum KycStatus {
   notStarted,
   bvnPending,
@@ -20,6 +22,7 @@ class UserModel {
     required this.accountNumber,
     this.accountId,
     this.paymentRef,
+    this.accountType,
     this.kycStatus = KycStatus.notStarted,
     this.bvnVerified = false,
     this.ninVerified = false,
@@ -34,6 +37,7 @@ class UserModel {
   final String accountNumber;
   final String? accountId;
   final String? paymentRef;
+  final String? accountType;
   final KycStatus kycStatus;
   final bool bvnVerified;
   final bool ninVerified;
@@ -52,6 +56,7 @@ class UserModel {
     String? accountNumber,
     String? accountId,
     String? paymentRef,
+    String? accountType,
     KycStatus? kycStatus,
     bool? bvnVerified,
     bool? ninVerified,
@@ -66,6 +71,7 @@ class UserModel {
       accountNumber: accountNumber ?? this.accountNumber,
       accountId: accountId ?? this.accountId,
       paymentRef: paymentRef ?? this.paymentRef,
+      accountType: accountType ?? this.accountType,
       kycStatus: kycStatus ?? this.kycStatus,
       bvnVerified: bvnVerified ?? this.bvnVerified,
       ninVerified: ninVerified ?? this.ninVerified,
@@ -102,8 +108,8 @@ class AccountBalance {
 
   factory AccountBalance.fromJson(Map<String, dynamic> json) {
     return AccountBalance(
-      available: (json['available'] as num).toDouble(),
-      ledger: (json['ledger'] as num).toDouble(),
+      available: JsonUtils.parseDouble(json['available']),
+      ledger: JsonUtils.parseDouble(json['ledger']),
       currency: json['currency'] as String? ?? 'NGN',
     );
   }

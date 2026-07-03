@@ -301,6 +301,10 @@ export class TellerService {
 
 
   async processWithdrawal(dto: TransactionDto, user: JwtPayload) {
+    const account = await this.prisma.account.findUnique({ where: { id: dto.accountId } });
+    if (account?.type === AccountType.MY_PIKIN) {
+      throw new BadRequestException('My Pikin accounts cannot be withdrawn from.');
+    }
 
     const request = await this.operationsService.createWithdrawalRequest({
 

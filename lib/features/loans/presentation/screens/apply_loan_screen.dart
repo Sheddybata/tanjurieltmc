@@ -156,10 +156,13 @@ class _ApplyLoanScreenState extends ConsumerState<ApplyLoanScreen> {
 
       }
 
-    } catch (_) {
-
-      if (mounted) setState(() => _loadingProducts = false);
-
+    } catch (e) {
+      if (mounted) {
+        setState(() => _loadingProducts = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not load loan products: $e')),
+        );
+      }
     }
 
   }

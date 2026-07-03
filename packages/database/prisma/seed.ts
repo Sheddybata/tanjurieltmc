@@ -129,10 +129,13 @@ async function main() {
   });
 
   await prisma.account.upsert({
-    where: { accountNumber: 'TMFSEED001' },
-    update: {},
+    where: { accountNumber: '9012345678' },
+    update: {
+      type: AccountType.SAVINGS,
+      status: AccountStatus.ACTIVE,
+    },
     create: {
-      accountNumber: 'TMFSEED001',
+      accountNumber: '9012345678',
       type: AccountType.SAVINGS,
       status: AccountStatus.ACTIVE,
       balance: 0,

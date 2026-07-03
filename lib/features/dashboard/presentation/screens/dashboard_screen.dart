@@ -31,11 +31,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   Future<void> _loadData() async {
-    await ref.read(authProvider.notifier).refreshProfile();
-    final balance = await ref.read(accountRepositoryProvider).getBalance();
+    final data = await ref.read(accountRepositoryProvider).getDashboardData();
+    ref.read(authProvider.notifier).updateUser(data.user);
     if (mounted) {
       setState(() {
-        _balance = balance;
+        _balance = data.balance;
         _loading = false;
       });
     }

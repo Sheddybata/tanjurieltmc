@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tanjuriel_microfinance/core/network/api_client.dart';
 import 'package:tanjuriel_microfinance/core/theme/app_colors.dart';
+import 'package:tanjuriel_microfinance/core/utils/json_utils.dart';
 import 'package:tanjuriel_microfinance/core/utils/kyc_guard.dart';
 import 'package:tanjuriel_microfinance/core/widgets/app_button.dart';
 import 'package:tanjuriel_microfinance/core/widgets/app_text_field.dart';
@@ -23,6 +24,7 @@ class _FundAccountScreenState extends ConsumerState<FundAccountScreen> {
   String? _selectedProvider;
   bool _loading = true;
   bool _submitting = false;
+  String? _loadError;
 
   @override
   void initState() {
@@ -34,14 +36,21 @@ class _FundAccountScreenState extends ConsumerState<FundAccountScreen> {
     try {
       final api = ref.read(apiClientProvider);
       final res = await api.get<Map<String, dynamic>>('/customer/settlement-accounts');
-      final data = (res.data?['data'] as List<dynamic>?) ?? [];
+      final raw = res.data?['data'];
+      final data = raw is List ? raw : <dynamic>[];
       setState(() {
-        _banks = data.cast<Map<String, dynamic>>();
-        if (_banks.isNotEmpty) _selectedProvider = _banks.first['provider'] as String?;
+        _banks = data.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        if (_banks.isNotEmpty) {
+          _selectedProvider = JsonUtils.parseString(_banks.first['provider']);
+        }
         _loading = false;
+        _loadError = _banks.isEmpty ? 'No settlement accounts configured yet.' : null;
       });
-    } catch (_) {
-      setState(() => _loading = false);
+    } catch (e) {
+      setState(() {
+        _loading = false;
+        _loadError = e.toString();
+      });
     }
   }
 
@@ -63,7 +72,7 @@ class _FundAccountScreenState extends ConsumerState<FundAccountScreen> {
         'accountId': user!.accountId,
         'amount': amount,
         'settlementProvider': _selectedProvider,
-        'customerNote': _noteController.text.trim().isEmpty ? null : _noteController.text.trim(),
+        if (_noteController.text.trim().isNotEmpty) 'customerNote': _noteController.text.trim(),
       });
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -73,7 +82,7 @@ class _FundAccountScreenState extends ConsumerState<FundAccountScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
       );
     } finally {
       if (mounted) setState(() => _submitting = false);
@@ -89,7 +98,7 @@ class _FundAccountScreenState extends ConsumerState<FundAccountScreen> {
   Widget build(BuildContext context) {
     final user = ref.watch(authProvider).user;
     final selectedBank = _banks.cast<Map<String, dynamic>?>().firstWhere(
-          (b) => b?['provider'] == _selectedProvider,
+          (b) => JsonUtils.parseString(b?['provider']) == _selectedProvider,
           orElse: () => null,
         );
 
@@ -97,7 +106,14 @@ class _FundAccountScreenState extends ConsumerState<FundAccountScreen> {
       appBar: AppBar(title: const Text('Fund Account')),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
+          : _loadError != null && _banks.isEmpty
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Text(_loadError!, textAlign: TextAlign.center),
+                  ),
+                )
+              : SingleChildScrollView(
               padding: const EdgeInsets.all(24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -112,7 +128,7 @@ class _FundAccountScreenState extends ConsumerState<FundAccountScreen> {
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
                   ),
                   const SizedBox(height: 24),
-                  if (user?.paymentRef != null) ...[
+                  if (user?.paymentRef != null && user!.paymentRef!.isNotEmpty) ...[
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.all(16),
@@ -130,7 +146,7 @@ class _FundAccountScreenState extends ConsumerState<FundAccountScreen> {
                             children: [
                               Expanded(
                                 child: Text(
-                                  user!.paymentRef!,
+                                  user.paymentRef!,
                                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                                         fontWeight: FontWeight.bold,
                                         color: AppColors.primary,
@@ -152,20 +168,26 @@ class _FundAccountScreenState extends ConsumerState<FundAccountScreen> {
                   Text('Pay into', style: Theme.of(context).textTheme.titleSmall),
                   const SizedBox(height: 8),
                   ..._banks.map((bank) {
-                    final provider = bank['provider'] as String;
+                    final provider = JsonUtils.parseString(bank['provider']);
                     return RadioListTile<String>(
                       value: provider,
                       groupValue: _selectedProvider,
                       onChanged: (v) => setState(() => _selectedProvider = v),
-                      title: Text(bank['bankName'] as String),
-                      subtitle: Text('${bank['accountName']}\n${bank['accountNumber']}'),
+                      title: Text(JsonUtils.parseString(bank['bankName'], fallback: 'Bank')),
+                      subtitle: Text(
+                        '${JsonUtils.parseString(bank['accountName'], fallback: 'Account')}\n'
+                        '${JsonUtils.parseString(bank['accountNumber'])}',
+                      ),
                     );
                   }),
                   if (selectedBank != null)
                     Align(
                       alignment: Alignment.centerRight,
                       child: TextButton(
-                        onPressed: () => _copy(selectedBank['accountNumber'] as String, 'Account number'),
+                        onPressed: () => _copy(
+                          JsonUtils.parseString(selectedBank['accountNumber']),
+                          'Account number',
+                        ),
                         child: const Text('Copy account number'),
                       ),
                     ),

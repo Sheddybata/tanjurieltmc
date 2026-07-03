@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
-import { ApprovalAction, LoanStatus, PaymentChannel } from '@tanjuriel/database';
+import { ApprovalAction, LoanStatus, PaymentChannel, AccountType } from '@tanjuriel/database';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { OperationsService } from '../operations/operations.service';
 import { CustomerAuthService } from '../customer-auth/customer-auth.service';
@@ -62,6 +62,11 @@ export class CustomerPortalService {
   async createTransferRequest(customerId: string, dto: CustomerTransferRequestDto) {
     await ensureCustomerKycVerified(this.prisma, customerId);
     await this.ensureAccountOwnership(customerId, dto.accountId);
+
+    const account = await this.prisma.account.findUnique({ where: { id: dto.accountId } });
+    if (account?.type === AccountType.MY_PIKIN) {
+      throw new BadRequestException('My Pikin accounts cannot be withdrawn from. Funds are locked for the child.');
+    }
 
     const pinValid = await this.customerAuthService.verifyPin(customerId, dto.pin);
     if (!pinValid) throw new BadRequestException('Invalid PIN');

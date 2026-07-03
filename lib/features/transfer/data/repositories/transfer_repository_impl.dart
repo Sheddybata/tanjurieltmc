@@ -25,7 +25,6 @@ class TransferRepositoryImpl implements TransferRepository {
 
   @override
   Future<List<BankModel>> getBanks() async {
-    await Future<void>.delayed(const Duration(milliseconds: 200));
     return _banks;
   }
 
@@ -34,8 +33,6 @@ class TransferRepositoryImpl implements TransferRepository {
     required String bankCode,
     required String accountNumber,
   }) async {
-    await Future<void>.delayed(const Duration(milliseconds: 600));
-
     if (accountNumber == '0000000000') {
       return NameEnquiryResult(
         accountNumber: accountNumber,

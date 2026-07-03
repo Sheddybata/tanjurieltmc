@@ -1,3 +1,5 @@
+import 'package:tanjuriel_microfinance/core/utils/json_utils.dart';
+
 enum LoanStatus {
   draft,
   submitted,
@@ -44,12 +46,12 @@ class LoanProductModel {
       code: json['code'] as String,
       name: json['name'] as String,
       description: json['description'] as String?,
-      minAmount: (json['minAmount'] as num).toDouble(),
-      maxAmount: (json['maxAmount'] as num).toDouble(),
-      minTenureMonths: json['minTenureMonths'] as int,
-      maxTenureMonths: json['maxTenureMonths'] as int,
-      interestRate: (json['interestRate'] as num).toDouble(),
-      processingFee: (json['processingFee'] as num?)?.toDouble() ?? 0,
+      minAmount: JsonUtils.parseDouble(json['minAmount']),
+      maxAmount: JsonUtils.parseDouble(json['maxAmount']),
+      minTenureMonths: JsonUtils.parseInt(json['minTenureMonths'], fallback: 1),
+      maxTenureMonths: JsonUtils.parseInt(json['maxTenureMonths'], fallback: 12),
+      interestRate: JsonUtils.parseDouble(json['interestRate']),
+      processingFee: JsonUtils.parseDouble(json['processingFee']),
       requiresCollateral: json['requiresCollateral'] as bool? ?? true,
     );
   }
@@ -77,8 +79,8 @@ class LoanScheduleItem {
       id: json['id'] as String,
       installmentNumber: json['installmentNumber'] as int,
       dueDate: DateTime.parse(json['dueDate'] as String),
-      totalDue: (json['totalDue'] as num).toDouble(),
-      paidAmount: (json['paidAmount'] as num?)?.toDouble() ?? 0,
+      totalDue: JsonUtils.parseDouble(json['totalDue']),
+      paidAmount: JsonUtils.parseDouble(json['paidAmount']),
       isPaid: json['isPaid'] as bool? ?? false,
     );
   }
@@ -156,12 +158,12 @@ class LoanModel {
       id: json['id'] as String,
       loanNumber: json['loanNumber'] as String,
       status: _parseStatus(json['status'] as String?),
-      principalAmount: (json['principalAmount'] as num).toDouble(),
-      interestRate: (json['interestRate'] as num).toDouble(),
-      tenureMonths: json['tenureMonths'] as int,
-      monthlyPayment: (json['monthlyPayment'] as num).toDouble(),
-      totalRepayable: (json['totalRepayable'] as num).toDouble(),
-      outstandingBalance: (json['outstandingBalance'] as num).toDouble(),
+      principalAmount: JsonUtils.parseDouble(json['principalAmount']),
+      interestRate: JsonUtils.parseDouble(json['interestRate']),
+      tenureMonths: JsonUtils.parseInt(json['tenureMonths'], fallback: 1),
+      monthlyPayment: JsonUtils.parseDouble(json['monthlyPayment']),
+      totalRepayable: JsonUtils.parseDouble(json['totalRepayable']),
+      outstandingBalance: JsonUtils.parseDouble(json['outstandingBalance']),
       purpose: json['purpose'] as String?,
       productName: product?['name'] as String? ?? 'Loan',
       schedules: schedules
@@ -175,7 +177,9 @@ class LoanModel {
           : null,
       collateral: json['collateral'] as String?,
       collateralType: json['collateralType'] as String?,
-      collateralEstimatedValue: (json['collateralEstimatedValue'] as num?)?.toDouble(),
+      collateralEstimatedValue: json['collateralEstimatedValue'] != null
+          ? JsonUtils.parseDouble(json['collateralEstimatedValue'])
+          : null,
       collateralVerifiedAt: json['collateralVerifiedAt'] != null
           ? DateTime.parse(json['collateralVerifiedAt'] as String)
           : null,

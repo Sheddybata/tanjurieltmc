@@ -1,3 +1,4 @@
+import 'package:tanjuriel_microfinance/core/utils/json_utils.dart';
 import 'package:tanjuriel_microfinance/shared/models/user_model.dart';
 
 class CustomerRegistrationInput {
@@ -66,9 +67,10 @@ UserModel userFromAuthCustomer(Map<String, dynamic> customer) {
     lastName: customer['lastName'] as String,
     email: customer['email'] as String? ?? '',
     phone: customer['phone'] as String,
-    accountNumber: primaryAccount?['accountNumber'] as String? ?? '',
+    accountNumber: JsonUtils.parseString(primaryAccount?['accountNumber']),
     accountId: primaryAccount?['id'] as String?,
-    paymentRef: customer['paymentRef'] as String?,
+    paymentRef: JsonUtils.parseString(customer['paymentRef']),
+    accountType: primaryAccount?['type'] as String?,
     kycStatus: _mapKyc(customer['kycStatus'] as String?),
     bvnVerified: customer['bvn'] != null,
     ninVerified: customer['nin'] != null,

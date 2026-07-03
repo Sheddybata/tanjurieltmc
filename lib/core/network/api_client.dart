@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tanjuriel_microfinance/core/config/app_config.dart';
 import 'package:tanjuriel_microfinance/core/constants/app_constants.dart';
+import 'package:tanjuriel_microfinance/core/utils/json_utils.dart';
 import 'package:tanjuriel_microfinance/core/errors/app_exception.dart';
 import 'package:tanjuriel_microfinance/core/network/dio_interceptors.dart';
 import 'package:tanjuriel_microfinance/core/network/mock_api_handler.dart';
@@ -105,7 +106,10 @@ class ErrorInterceptor extends Interceptor {
   String? _extractMessage(Response<dynamic>? response) {
     final data = response?.data;
     if (data is Map<String, dynamic>) {
-      return data['message'] as String? ?? data['error'] as String?;
+      return JsonUtils.formatApiMessage(
+        data['message'],
+        fallback: JsonUtils.formatApiMessage(data['error'], fallback: 'Request failed'),
+      );
     }
     return null;
   }

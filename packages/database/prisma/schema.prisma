@@ -27,6 +27,8 @@ enum AccountType {
   CURRENT
   FIXED_DEPOSIT
   LOAN
+  MY_PIKIN
+  DAILY_SAVINGS
 }
 
 enum AccountStatus {

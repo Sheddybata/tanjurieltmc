@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tanjuriel_microfinance/core/router/route_names.dart';
 import 'package:tanjuriel_microfinance/core/theme/app_colors.dart';
+import 'package:tanjuriel_microfinance/core/utils/account_number_formatter.dart';
 import 'package:tanjuriel_microfinance/core/utils/mask_utils.dart';
 import 'package:tanjuriel_microfinance/features/auth/presentation/providers/auth_provider.dart';
 
@@ -61,7 +62,9 @@ class ProfileScreen extends ConsumerWidget {
           _ProfileTile(
             icon: Icons.account_balance_wallet_outlined,
             title: 'Account Details',
-            subtitle: user?.accountNumber,
+            subtitle: user?.accountNumber == null || user!.accountNumber.isEmpty
+                ? null
+                : AccountNumberFormatter.display(user.accountNumber),
             onTap: () => context.push(RouteNames.accountDetails),
           ),
           const SizedBox(height: 16),

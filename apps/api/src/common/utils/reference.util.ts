@@ -15,7 +15,7 @@ export function generateReference(prefix: string): string {
 }
 
 export function generateAccountNumber(): string {
-  return generateReference(ACCOUNT_NUMBER_PREFIX);
+  return String(Math.floor(1000000000 + Math.random() * 9000000000));
 }
 
 export function generateCustomerNumber(): string {

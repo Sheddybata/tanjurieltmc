@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:tanjuriel_microfinance/core/utils/account_number_formatter.dart';
 import 'package:tanjuriel_microfinance/core/theme/app_colors.dart';
 import 'package:tanjuriel_microfinance/features/auth/presentation/providers/auth_provider.dart';
 
@@ -52,7 +53,7 @@ class AccountDetailsScreen extends ConsumerWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Savings account',
+                            AccountTypeLabels.fromApi(user?.accountType),
                             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                   color: Colors.white.withValues(alpha: 0.85),
                                 ),
@@ -75,7 +76,9 @@ class AccountDetailsScreen extends ConsumerWidget {
           _CopyField(
             icon: Icons.account_balance_wallet_outlined,
             label: 'Account number',
-            value: user?.accountNumber ?? '—',
+            value: user?.accountNumber == null || user!.accountNumber.isEmpty
+                ? '—'
+                : AccountNumberFormatter.display(user.accountNumber),
           ),
           const SizedBox(height: 10),
           _CopyField(

@@ -1,28 +1,31 @@
 #!/bin/sh
-set -e
 
 echo "==> PORT=${PORT:-4000}"
 echo "==> NODE_ENV=${NODE_ENV:-unset}"
 
 if [ -z "$DATABASE_URL" ]; then
-  echo "==> FATAL: DATABASE_URL is not set (use uppercase DATABASE_URL in Railway Variables)"
-  exit 1
+  echo "==> WARN: DATABASE_URL not set — API will start but login will fail"
+else
+  echo "==> DATABASE_URL is set"
+  case "$DATABASE_URL" in
+    *:6543*|*pgbouncer=true*)
+      echo "==> WARN: use session pooler port 5432 on Railway, not 6543/pgbouncer"
+      ;;
+  esac
 fi
 
-if [ -z "$DIRECT_DATABASE_URL" ]; then
-  echo "==> WARN: DIRECT_DATABASE_URL not set — using DATABASE_URL for migrations too"
+if [ -n "$DATABASE_URL" ] && [ -z "$DIRECT_DATABASE_URL" ]; then
   export DIRECT_DATABASE_URL="$DATABASE_URL"
+  echo "==> DIRECT_DATABASE_URL defaulted to DATABASE_URL"
 fi
 
-echo "==> DATABASE_URL is set"
-case "$DATABASE_URL" in
-  *:6543*|*pgbouncer=true*)
-    echo "==> WARN: port 6543 / pgbouncer URLs often break Prisma on Railway — use session pooler port 5432"
-    ;;
-esac
-
-echo "==> Running prisma migrate deploy..."
-npm run db:migrate:deploy
+# Do not block startup — Railway healthcheck needs the API listening quickly.
+if [ -n "$DATABASE_URL" ]; then
+  echo "==> Running prisma migrate deploy in background..."
+  (
+    npm run db:migrate:deploy && echo "==> Migrations complete"
+  ) || echo "==> ERROR: migrate failed — check DATABASE_URL / DIRECT_DATABASE_URL in Railway logs"
+fi
 
 echo "==> Starting API..."
 exec node apps/api/dist/main.js

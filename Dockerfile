@@ -18,6 +18,7 @@ RUN npm ci --include=dev \
   && npm prune --omit=dev
 
 ENV NODE_ENV=production
+ENV APP_BUILD=81db107-startup-v2
 EXPOSE 4000
 
 RUN chmod +x scripts/railway-start.sh

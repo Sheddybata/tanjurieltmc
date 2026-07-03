@@ -10,6 +10,7 @@ watchPatterns = [
   "/package.json",
   "/package-lock.json",
   "/Dockerfile",
+  "/scripts/**",
 ]
 
 [deploy]

@@ -9,10 +9,16 @@ if [ -z "$DATABASE_URL" ]; then
   exit 1
 fi
 
+if [ -z "$DIRECT_DATABASE_URL" ]; then
+  echo "==> WARN: DIRECT_DATABASE_URL not set — using DATABASE_URL for migrations too"
+  export DIRECT_DATABASE_URL="$DATABASE_URL"
+fi
+
 echo "==> DATABASE_URL is set"
 case "$DATABASE_URL" in
-  *sslmode=*) echo "==> DATABASE_URL includes sslmode" ;;
-  *) echo "==> WARN: append ?sslmode=require to DATABASE_URL if Supabase SSL errors occur" ;;
+  *:6543*|*pgbouncer=true*)
+    echo "==> WARN: port 6543 / pgbouncer URLs often break Prisma on Railway — use session pooler port 5432"
+    ;;
 esac
 
 echo "==> Running prisma migrate deploy..."

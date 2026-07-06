@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, FormEvent, useEffect } from 'react';
+import { useState, FormEvent, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { Header } from '@/components/layout/header';
@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { api } from '@/lib/api';
+import { TELLER_OPEN_ACCOUNT_TYPES } from '@/lib/account-types';
 
 interface CustomerOption {
   id: string;
@@ -17,15 +18,7 @@ interface CustomerOption {
   lastName: string;
 }
 
-const ACCOUNT_TYPES = [
-  { value: 'SAVINGS', label: 'Savings Account' },
-  { value: 'DAILY_SAVINGS', label: 'Daily Savings' },
-  { value: 'MY_PIKIN', label: 'My Pikin (Child Savings)' },
-  { value: 'CURRENT', label: 'Current Account' },
-  { value: 'FIXED_DEPOSIT', label: 'Fixed Deposit' },
-];
-
-export default function OpenAccountPage() {
+function OpenAccountForm() {
   const searchParams = useSearchParams();
   const preselectedCustomer = searchParams.get('customerId') ?? '';
 
@@ -64,61 +57,69 @@ export default function OpenAccountPage() {
   }
 
   return (
+    <Card className="max-w-lg">
+      {message && (
+        <div className={`mb-4 rounded-lg px-4 py-3 text-sm ${message.includes('Account opened') ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>
+          {message}
+        </div>
+      )}
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <Select
+          name="customerId"
+          label="Customer"
+          required
+          defaultValue={preselectedCustomer}
+          options={[
+            { value: '', label: 'Select customer...' },
+            ...customers.map((c) => ({
+              value: c.id,
+              label: `${c.firstName} ${c.lastName} (${c.customerNumber})`,
+            })),
+          ]}
+        />
+        <Select
+          name="type"
+          label="Account Type"
+          required
+          value={accountType}
+          onChange={(e) => setAccountType(e.target.value)}
+          options={[...TELLER_OPEN_ACCOUNT_TYPES]}
+        />
+        {accountType === 'MY_PIKIN' && (
+          <>
+            <Input name="label" label="Child name / label" placeholder="e.g. Ada Eze" required />
+            <Input name="maturityDate" label="Maturity date" type="date" required />
+            <p className="text-xs text-gray-500">
+              After maturity, the member can request withdrawal on mobile; manager approves before cash is paid at branch.
+            </p>
+          </>
+        )}
+        {accountType === 'DAILY_SAVINGS' && (
+          <p className="text-xs text-gray-500">
+            Daily savings transfers and withdrawals require manager approval like other accounts.
+          </p>
+        )}
+        <Input name="initialDeposit" label="Initial Deposit (NGN)" type="number" min="0" step="0.01" />
+        <Input
+          name="appPin"
+          label="Mobile app PIN (optional)"
+          placeholder="4–6 digits — enables mobile login for this customer"
+          maxLength={6}
+        />
+        <Button type="submit" loading={loading}>Open Account</Button>
+      </form>
+    </Card>
+  );
+}
+
+export default function OpenAccountPage() {
+  return (
     <DashboardLayout>
-      <Header title="Open Account" subtitle="Create savings, daily savings, My Pikin, or other account types" />
+      <Header title="Open Account" subtitle="Savings, Daily Savings, or My Pikin Savings" />
       <div className="p-8">
-        <Card className="max-w-lg">
-          {message && (
-            <div className={`mb-4 rounded-lg px-4 py-3 text-sm ${message.includes('Account opened') ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>
-              {message}
-            </div>
-          )}
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <Select
-              name="customerId"
-              label="Customer"
-              required
-              defaultValue={preselectedCustomer}
-              options={[
-                { value: '', label: 'Select customer...' },
-                ...customers.map((c) => ({
-                  value: c.id,
-                  label: `${c.firstName} ${c.lastName} (${c.customerNumber})`,
-                })),
-              ]}
-            />
-            <Select
-              name="type"
-              label="Account Type"
-              required
-              value={accountType}
-              onChange={(e) => setAccountType(e.target.value)}
-              options={ACCOUNT_TYPES}
-            />
-            {accountType === 'MY_PIKIN' && (
-              <>
-                <Input name="label" label="Child name / label" placeholder="e.g. Ada Eze" required />
-                <Input name="maturityDate" label="Maturity date" type="date" required />
-                <p className="text-xs text-gray-500">
-                  My Pikin withdrawals are branch-only after maturity, with manager approval.
-                </p>
-              </>
-            )}
-            {accountType === 'DAILY_SAVINGS' && (
-              <p className="text-xs text-gray-500">
-                Daily savings transfers and withdrawals require manager approval like other accounts.
-              </p>
-            )}
-            <Input name="initialDeposit" label="Initial Deposit (NGN)" type="number" min="0" step="0.01" />
-            <Input
-              name="appPin"
-              label="Mobile app PIN (optional)"
-              placeholder="4–6 digits — enables mobile login for this customer"
-              maxLength={6}
-            />
-            <Button type="submit" loading={loading}>Open Account</Button>
-          </form>
-        </Card>
+        <Suspense fallback={<Card className="max-w-lg p-6 text-sm text-gray-500">Loading…</Card>}>
+          <OpenAccountForm />
+        </Suspense>
       </div>
     </DashboardLayout>
   );

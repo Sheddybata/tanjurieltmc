@@ -7,8 +7,10 @@ import { Landmark, Eye, EyeOff, Lock, ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { publicSiteUrl } from '@/lib/domains';
 
 const showDemoAccounts = process.env.NODE_ENV === 'development';
+const publicHomeUrl = publicSiteUrl('/');
 
 export default function StaffLoginPage() {
   const [email, setEmail] = useState('');
@@ -38,7 +40,7 @@ export default function StaffLoginPage() {
     <div className="flex min-h-screen">
       <div className="hidden w-1/2 bg-gradient-to-br from-brand-700 via-brand-800 to-brand-950 lg:flex lg:flex-col lg:justify-between lg:p-12">
         <div>
-          <Link href="/" className="flex items-center gap-3 text-brand-200 transition hover:text-white">
+          <Link href={publicHomeUrl} className="flex items-center gap-3 text-brand-200 transition hover:text-white">
             <ArrowLeft className="h-4 w-4" />
             <span className="text-sm">Back to website</span>
           </Link>
@@ -82,7 +84,7 @@ export default function StaffLoginPage() {
 
       <div className="flex flex-1 flex-col">
         <div className="flex items-center justify-between p-4 lg:hidden">
-          <Link href="/" className="flex items-center gap-2 text-sm text-gray-500">
+          <Link href={publicHomeUrl} className="flex items-center gap-2 text-sm text-gray-500">
             <ArrowLeft className="h-4 w-4" />
             Back
           </Link>

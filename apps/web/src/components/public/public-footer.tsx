@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Landmark, Lock } from 'lucide-react';
 import { SITE, NAV } from '@/lib/site-content';
+import { staffPortalUrl } from '@/lib/domains';
 
 export function PublicFooter() {
   return (
@@ -83,7 +84,7 @@ export function PublicFooter() {
         <div className="mt-10 flex flex-col items-center justify-between gap-4 border-t border-white/10 pt-8 sm:flex-row">
           <p className="text-sm text-brand-300">&copy; {new Date().getFullYear()} {SITE.name}. All rights reserved.</p>
           <Link
-            href="/staff/login"
+            href={staffPortalUrl()}
             className="inline-flex items-center gap-1.5 text-sm text-brand-400 transition hover:text-white"
           >
             <Lock className="h-3.5 w-3.5" />

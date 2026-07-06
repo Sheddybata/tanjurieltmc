@@ -4,10 +4,11 @@ export const SITE = {
   tagline: 'Empowering communities through accessible financial services',
   description:
     'Tanjuriel Microfinance helps individuals, families, and small businesses save, borrow, and grow with products built for everyday Nigerian life.',
-  email: 'hello@tanjuriel.com',
+  email: 'hello@tanjurieltmc.com',
   phone: '+234 800 000 0000',
   whatsapp: '+234 800 000 0000',
   address: 'Lagos, Nigeria',
+  website: 'https://tanjurieltmc.com',
   androidDownloadUrl: process.env.NEXT_PUBLIC_ANDROID_APP_URL ?? '/downloads/tanjuriel-android.apk',
   iosDownloadUrl: process.env.NEXT_PUBLIC_IOS_APP_URL ?? '/downloads/tanjuriel-ios.ipa',
 };

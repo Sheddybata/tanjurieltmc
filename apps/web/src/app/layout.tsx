@@ -1,9 +1,11 @@
 import type { Metadata } from 'next';
 import { AuthProvider } from '@/lib/auth-context';
 import { ToastProvider } from '@/components/ui/toast-provider';
+import { DOMAINS } from '@/lib/domains';
 import './globals.css';
 
 export const metadata: Metadata = {
+  metadataBase: new URL(DOMAINS.publicSite),
   title: {
     default: 'Tanjuriel Microfinance',
     template: '%s | Tanjuriel Microfinance',

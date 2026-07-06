@@ -5,7 +5,10 @@ import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import { Landmark, Lock, Menu, X, ChevronDown, Smartphone } from 'lucide-react';
 import { SITE, NAV } from '@/lib/site-content';
+import { staffPortalUrl } from '@/lib/domains';
 import { cn } from '@/lib/utils';
+
+const staffLoginUrl = staffPortalUrl('/staff/login');
 
 export function PublicHeader() {
   const pathname = usePathname();
@@ -84,7 +87,7 @@ export function PublicHeader() {
             Download App
           </Link>
           <Link
-            href="/staff/login"
+            href={staffLoginUrl}
             className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-500 transition hover:border-gray-300 hover:text-gray-700"
           >
             <Lock className="h-3.5 w-3.5" />
@@ -162,7 +165,7 @@ export function PublicHeader() {
               Download App
             </Link>
             <Link
-              href="/staff/login"
+              href={staffLoginUrl}
               onClick={() => setMobileOpen(false)}
               className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-600"
             >

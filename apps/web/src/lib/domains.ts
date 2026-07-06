@@ -1,5 +1,6 @@
 const publicHost = process.env.NEXT_PUBLIC_PUBLIC_HOST ?? 'tanjurieltmc.com';
 const adminHost = process.env.NEXT_PUBLIC_ADMIN_HOST ?? 'admin.tanjurieltmc.com';
+const publicApex = publicHost.replace(/^www\./, '').toLowerCase();
 
 export const DOMAINS = {
   publicHost,
@@ -19,16 +20,30 @@ const PUBLIC_ROUTE_PREFIXES = [
   '/contact',
 ];
 
+export function normalizeHost(hostHeader: string | null): string {
+  if (!hostHeader) return '';
+  return hostHeader.split(',')[0].trim().split(':')[0].toLowerCase();
+}
+
 export function isLocalHost(host: string): boolean {
   return host === 'localhost' || host === '127.0.0.1';
 }
 
 export function isAdminHost(host: string): boolean {
-  return host === adminHost || host === `www.${adminHost}`;
+  const h = host.toLowerCase();
+  if (h === adminHost.toLowerCase() || h === `www.${adminHost}`.toLowerCase()) {
+    return true;
+  }
+  // Always treat admin.<apex> as staff portal even if Vercel env vars are wrong
+  return h === `admin.${publicApex}` || h === `www.admin.${publicApex}`;
 }
 
 export function isPublicHost(host: string): boolean {
-  return host === publicHost || host === `www.${publicHost}`;
+  const h = host.toLowerCase();
+  if (h === publicHost.toLowerCase() || h === `www.${publicHost}`.toLowerCase()) {
+    return true;
+  }
+  return h === publicApex || h === `www.${publicApex}`;
 }
 
 export function isStaffRoute(pathname: string): boolean {

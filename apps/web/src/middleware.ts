@@ -7,10 +7,13 @@ import {
   isPublicHost,
   isPublicMarketingRoute,
   isStaffRoute,
+  normalizeHost,
 } from '@/lib/domains';
 
 export function middleware(request: NextRequest) {
-  const host = request.headers.get('host')?.split(':')[0] ?? '';
+  const host = normalizeHost(
+    request.headers.get('x-forwarded-host') ?? request.headers.get('host'),
+  );
   const { pathname } = request.nextUrl;
 
   if (isLocalHost(host)) {
@@ -18,7 +21,7 @@ export function middleware(request: NextRequest) {
   }
 
   if (isAdminHost(host)) {
-    if (pathname === '/') {
+    if (pathname === '/' || pathname === '/index.html') {
       return NextResponse.redirect(new URL('/staff/login', request.url));
     }
 

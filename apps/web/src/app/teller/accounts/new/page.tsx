@@ -23,26 +23,45 @@ function OpenAccountForm() {
   const preselectedCustomer = searchParams.get('customerId') ?? '';
 
   const [customers, setCustomers] = useState<CustomerOption[]>([]);
+  const [customersError, setCustomersError] = useState('');
+  const [customerId, setCustomerId] = useState(preselectedCustomer);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [accountType, setAccountType] = useState('SAVINGS');
 
   useEffect(() => {
+    setCustomerId(preselectedCustomer);
+  }, [preselectedCustomer]);
+
+  useEffect(() => {
     api.get<{ success: boolean; data: CustomerOption[] }>('/teller/customers?limit=100')
-      .then((res) => setCustomers(res.data))
-      .catch(() => {});
+      .then((res) => {
+        setCustomers(res.data);
+        setCustomersError('');
+      })
+      .catch((err: unknown) => {
+        setCustomers([]);
+        setCustomersError((err as { message?: string })?.message || 'Could not load customers from the server');
+      });
   }, []);
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
     setMessage('');
+
+    if (!customerId) {
+      setMessage('Please select a customer. If the list is empty, check that you are logged in and the API is reachable.');
+      setLoading(false);
+      return;
+    }
+
     const form = new FormData(e.currentTarget);
 
     try {
       const res = await api.post<{ success: boolean; data: { accountNumber: string } }>('/teller/accounts', {
-        customerId: form.get('customerId'),
-        type: form.get('type'),
+        customerId,
+        type: accountType,
         initialDeposit: form.get('initialDeposit') ? Number(form.get('initialDeposit')) : undefined,
         appPin: form.get('appPin') || undefined,
         label: form.get('label') || undefined,
@@ -58,6 +77,11 @@ function OpenAccountForm() {
 
   return (
     <Card className="max-w-lg">
+      {customersError && (
+        <div className="mb-4 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          {customersError}. Customer list could not be loaded — you cannot open an account until this is fixed.
+        </div>
+      )}
       {message && (
         <div className={`mb-4 rounded-lg px-4 py-3 text-sm ${message.includes('Account opened') ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>
           {message}
@@ -68,9 +92,10 @@ function OpenAccountForm() {
           name="customerId"
           label="Customer"
           required
-          defaultValue={preselectedCustomer}
+          value={customerId}
+          onChange={(e) => setCustomerId(e.target.value)}
           options={[
-            { value: '', label: 'Select customer...' },
+            { value: '', label: customers.length ? 'Select customer...' : 'No customers loaded' },
             ...customers.map((c) => ({
               value: c.id,
               label: `${c.firstName} ${c.lastName} (${c.customerNumber})`,

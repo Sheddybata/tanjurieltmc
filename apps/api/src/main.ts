@@ -38,6 +38,17 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
 
+  const http = app.getHttpAdapter().getInstance();
+  http.get('/', (_req: unknown, res: { json: (body: object) => void }) => {
+    res.json({
+      service: 'Tanjuriel Microfinance API',
+      status: 'ok',
+      health: '/api/v1/health',
+      healthDb: '/api/v1/health/db',
+      docs: '/api/docs',
+    });
+  });
+
   const port = process.env.PORT || process.env.API_PORT || 4000;
   const host = process.env.API_HOST || '0.0.0.0';
   await app.listen(port, host);

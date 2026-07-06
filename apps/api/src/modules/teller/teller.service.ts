@@ -33,6 +33,7 @@ import {
 import { RegisterCustomerDto, OpenAccountDto, TransactionDto, EnableMobileAccessDto, LoanRepaymentDto } from './dto/teller.dto';
 
 import { OperationsService } from '../operations/operations.service';
+import { customerAccountSelect } from '../../common/utils/account-select.util';
 
 import * as bcrypt from 'bcryptjs';
 
@@ -164,7 +165,7 @@ export class TellerService {
 
       include: {
 
-        accounts: true,
+        accounts: { select: customerAccountSelect },
 
         loans: { select: { id: true, loanNumber: true, status: true, outstandingBalance: true } },
 

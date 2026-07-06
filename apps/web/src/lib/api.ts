@@ -8,6 +8,12 @@ export interface ApiError {
   statusCode: number;
 }
 
+function formatApiMessage(message: unknown): string {
+  if (Array.isArray(message)) return message.join('. ');
+  if (typeof message === 'string' && message.trim()) return message;
+  return 'Request failed';
+}
+
 class ApiClient {
   private baseUrl: string;
 
@@ -47,7 +53,7 @@ class ApiClient {
       }
       if (typeof window !== 'undefined') {
         localStorage.clear();
-        window.location.href = '/login';
+        window.location.href = '/staff/login';
       }
     }
 
@@ -55,7 +61,7 @@ class ApiClient {
 
     if (!response.ok) {
       throw {
-        message: data.message || data.error || 'Request failed',
+        message: formatApiMessage(data.message ?? data.error),
         statusCode: response.status,
       } as ApiError;
     }

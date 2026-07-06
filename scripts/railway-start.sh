@@ -43,10 +43,17 @@ if [ -n "$DATABASE_URL" ] && [ -z "$DIRECT_DATABASE_URL" ]; then
 fi
 
 if [ -n "$DATABASE_URL" ]; then
-  echo "==> Running prisma migrate deploy in background..."
-  (
-    npm run db:migrate:deploy && echo "==> Migrations complete"
-  ) || echo "==> ERROR: migrate failed — check DATABASE_URL / DIRECT_DATABASE_URL in Railway logs"
+  echo "==> Running prisma migrate deploy..."
+  if npm run db:migrate:deploy; then
+    echo "==> Migrations complete"
+  else
+    echo "==> ERROR: migrate failed — API will start but customer login and new features may fail"
+    echo "==> If a migration failed earlier, run in Supabase SQL editor:"
+    echo "    ALTER TABLE accounts ADD COLUMN IF NOT EXISTS label TEXT;"
+    echo "    ALTER TABLE accounts ADD COLUMN IF NOT EXISTS \"maturityDate\" TIMESTAMP(3);"
+    echo "    ALTER TABLE payment_requests ADD COLUMN IF NOT EXISTS \"loanId\" TEXT;"
+    echo "    Then: npx prisma migrate resolve --applied <migration_name>"
+  fi
 fi
 
 echo "==> Starting API..."

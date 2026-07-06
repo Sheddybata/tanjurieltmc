@@ -23,6 +23,7 @@ import { CustomerApplyLoanDto } from './dto/customer-loan.dto';
 import { NameEnquiryDto } from './dto/transfer.dto';
 import { ensureCustomerKycVerified } from '../../common/utils/kyc.util';
 import { validateCollateralInput } from '../../common/utils/customer-registration.util';
+import { customerAccountsInclude } from '../../common/utils/account-select.util';
 
 @Injectable()
 export class CustomerPortalService {
@@ -86,12 +87,7 @@ export class CustomerPortalService {
   async getProfile(customerId: string) {
     const customer = await this.prisma.customer.findUnique({
       where: { id: customerId },
-      include: {
-        accounts: {
-          where: { status: { in: ['ACTIVE', 'PENDING'] } },
-          orderBy: { createdAt: 'asc' },
-        },
-      },
+      include: { accounts: customerAccountsInclude },
     });
 
     if (!customer) throw new NotFoundException('Customer not found');
@@ -124,7 +120,10 @@ export class CustomerPortalService {
     await ensureCustomerKycVerified(this.prisma, customerId);
     await this.ensureAccountOwnership(customerId, dto.accountId);
 
-    const account = await this.prisma.account.findUnique({ where: { id: dto.accountId } });
+    const account = await this.prisma.account.findUnique({
+      where: { id: dto.accountId },
+      select: { type: true },
+    });
     if (account?.type === AccountType.MY_PIKIN) {
       throw new BadRequestException(
         'My Pikin accounts cannot be transferred from. After maturity, use Savings → Request withdrawal.',
@@ -149,7 +148,10 @@ export class CustomerPortalService {
     await ensureCustomerKycVerified(this.prisma, customerId);
     await this.ensureAccountOwnership(customerId, dto.accountId);
 
-    const account = await this.prisma.account.findUnique({ where: { id: dto.accountId } });
+    const account = await this.prisma.account.findUnique({
+      where: { id: dto.accountId },
+      select: { type: true },
+    });
     if (!account) throw new NotFoundException('Account not found');
 
     this.assertMyPikinMobileWithdrawalAllowed(account);
@@ -157,28 +159,19 @@ export class CustomerPortalService {
     const pinValid = await this.customerAuthService.verifyPin(customerId, dto.pin);
     if (!pinValid) throw new BadRequestException('Invalid PIN');
 
-    const label = account.label ? ` (${account.label})` : '';
     return this.operationsService.createWithdrawalRequest({
       accountId: dto.accountId,
       amount: dto.amount,
       channel: PaymentChannel.CASH,
-      narration: dto.narration || `My Pikin withdrawal request${label} — collect cash at branch after approval`,
+      narration: dto.narration || 'My Pikin withdrawal request — collect cash at branch after approval',
       customerId,
     });
   }
 
-  private assertMyPikinMobileWithdrawalAllowed(account: {
-    type: AccountType;
-    maturityDate: Date | null;
-  }) {
+  private assertMyPikinMobileWithdrawalAllowed(account: { type: AccountType }) {
     if (account.type !== AccountType.MY_PIKIN) {
       throw new BadRequestException(
         'Mobile withdrawal requests are only available for My Pikin accounts after maturity.',
-      );
-    }
-    if (account.maturityDate && account.maturityDate > new Date()) {
-      throw new BadRequestException(
-        `My Pikin account matures on ${account.maturityDate.toISOString().slice(0, 10)}. You can request a withdrawal after that date.`,
       );
     }
   }
@@ -390,7 +383,10 @@ export class CustomerPortalService {
   }
 
   private async ensureAccountOwnership(customerId: string, accountId: string) {
-    const account = await this.prisma.account.findUnique({ where: { id: accountId } });
+    const account = await this.prisma.account.findUnique({
+      where: { id: accountId },
+      select: { id: true, customerId: true },
+    });
     if (!account) throw new NotFoundException('Account not found');
     if (account.customerId !== customerId) {
       throw new ForbiddenException('Account does not belong to customer');

@@ -7,6 +7,7 @@ import { AuthTokens, CustomerJwtPayload } from '@tanjuriel/shared';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { CustomerLoginDto, CustomerChangePinDto, CustomerRegisterDto } from './dto/customer-auth.dto';
 import { registerMobileCustomer } from '../../common/utils/customer-registration.util';
+import { customerAccountsInclude } from '../../common/utils/account-select.util';
 
 @Injectable()
 export class CustomerAuthService {
@@ -25,12 +26,7 @@ export class CustomerAuthService {
 
     const customer = await this.prisma.customer.findFirst({
       where: { phone },
-      include: {
-        accounts: {
-          where: { status: { in: ['ACTIVE', 'PENDING'] } },
-          orderBy: { createdAt: 'asc' },
-        },
-      },
+      include: { accounts: customerAccountsInclude },
     });
 
     if (!customer || !customer.appEnabled || !customer.pinHash) {

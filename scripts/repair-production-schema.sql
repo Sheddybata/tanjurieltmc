@@ -1,7 +1,8 @@
--- My Pikin account metadata + loan repayment request link (enum value is in 20250706100500)
+-- Run in Supabase SQL editor if Railway migrate deploy failed.
+-- Safe to re-run (IF NOT EXISTS).
+
 ALTER TABLE "accounts" ADD COLUMN IF NOT EXISTS "label" TEXT;
 ALTER TABLE "accounts" ADD COLUMN IF NOT EXISTS "maturityDate" TIMESTAMP(3);
-
 ALTER TABLE "payment_requests" ADD COLUMN IF NOT EXISTS "loanId" TEXT;
 
 DO $$
@@ -16,3 +17,5 @@ BEGIN
 END $$;
 
 CREATE INDEX IF NOT EXISTS "payment_requests_loanId_idx" ON "payment_requests"("loanId");
+
+ALTER TYPE "PaymentRequestType" ADD VALUE IF NOT EXISTS 'LOAN_REPAYMENT';

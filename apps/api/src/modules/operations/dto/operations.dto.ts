@@ -87,3 +87,23 @@ export class CustomerTransferRequestDto {
   @IsString()
   narration?: string;
 }
+
+export class CustomerWithdrawalRequestDto {
+  @ApiProperty()
+  @IsUUID()
+  accountId: string;
+
+  @ApiProperty()
+  @IsNumber()
+  @Min(1)
+  amount: number;
+
+  @ApiProperty()
+  @IsString()
+  pin: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  narration?: string;
+}

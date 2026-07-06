@@ -10,8 +10,9 @@ import {
   collateralPhotoStorage,
 } from '../../common/utils/collateral-upload.util';
 import { CustomerPortalService } from './customer-portal.service';
-import { CustomerDepositRequestDto, CustomerTransferRequestDto } from '../operations/dto/operations.dto';
+import { CustomerDepositRequestDto, CustomerTransferRequestDto, CustomerWithdrawalRequestDto } from '../operations/dto/operations.dto';
 import { CustomerApplyLoanDto } from './dto/customer-loan.dto';
+import { NameEnquiryDto } from './dto/transfer.dto';
 @ApiTags('Customer App')
 @Controller('customer')
 @UseGuards(JwtAuthGuard, CustomerGuard)
@@ -40,10 +41,31 @@ export class CustomerPortalController {
     return { success: true, data };
   }
 
+  @Get('transfers/banks')
+  @ApiOperation({ summary: 'List Nigerian banks for transfers (ALAT NIP list)' })
+  async transferBanks() {
+    const data = await this.customerPortalService.getTransferBanks();
+    return { success: true, data };
+  }
+
+  @Post('transfers/name-enquiry')
+  @ApiOperation({ summary: 'Verify beneficiary account name before transfer (ALAT NIP)' })
+  async transferNameEnquiry(@Body() dto: NameEnquiryDto) {
+    const data = await this.customerPortalService.lookupTransferBeneficiary(dto);
+    return { success: true, data };
+  }
+
   @Post('transfer-requests')
   @ApiOperation({ summary: 'Submit a transfer request for manager approval' })
   async transferRequest(@User() user: CustomerJwtPayload, @Body() dto: CustomerTransferRequestDto) {
     const data = await this.customerPortalService.createTransferRequest(user.customerId, dto);
+    return { success: true, data };
+  }
+
+  @Post('withdrawal-requests')
+  @ApiOperation({ summary: 'Request My Pikin cash withdrawal after maturity (manager approval required)' })
+  async withdrawalRequest(@User() user: CustomerJwtPayload, @Body() dto: CustomerWithdrawalRequestDto) {
+    const data = await this.customerPortalService.createWithdrawalRequest(user.customerId, dto);
     return { success: true, data };
   }
 

@@ -6,7 +6,9 @@ import {
 } from '@nestjs/common';
 import {
   AccountStatus,
+  AccountType,
   ApprovalAction,
+  LoanStatus,
   PaymentChannel,
   PaymentRequestStatus,
   PaymentRequestType,
@@ -51,6 +53,15 @@ export interface CreateTransferRequestInput {
   beneficiaryName: string;
   narration?: string;
   customerId: string;
+}
+
+export interface CreateLoanRepaymentRequestInput {
+  loanId: string;
+  accountId: string;
+  amount: number;
+  customerId: string;
+  initiatedByStaffId: string;
+  narration?: string;
 }
 
 @Injectable()
@@ -191,6 +202,60 @@ export class OperationsService {
     return request;
   }
 
+  async createLoanRepaymentRequest(input: CreateLoanRepaymentRequestInput) {
+    const loan = await this.prisma.loan.findUnique({
+      where: { id: input.loanId },
+      include: { customer: true },
+    });
+
+    if (!loan) throw new NotFoundException('Loan not found');
+    if (!([LoanStatus.DISBURSED, LoanStatus.ACTIVE, LoanStatus.OVERDUE] as LoanStatus[]).includes(loan.status)) {
+      throw new BadRequestException('Loan is not active for repayment');
+    }
+    if (input.amount > Number(loan.outstandingBalance)) {
+      throw new BadRequestException('Repayment amount exceeds outstanding balance');
+    }
+
+    const account = await this.getActiveAccount(input.accountId);
+    if (account.customerId !== loan.customerId) {
+      throw new BadRequestException('Account does not belong to loan customer');
+    }
+
+    const request = await this.prisma.paymentRequest.create({
+      data: {
+        reference: generatePaymentRequestRef(),
+        type: PaymentRequestType.LOAN_REPAYMENT,
+        status: PaymentRequestStatus.PENDING,
+        amount: input.amount,
+        channel: PaymentChannel.CASH,
+        accountId: input.accountId,
+        customerId: input.customerId,
+        loanId: input.loanId,
+        initiatedByStaffId: input.initiatedByStaffId,
+        narration: input.narration || `Loan repayment - ${loan.loanNumber}`,
+      },
+      include: this.requestIncludes(),
+    });
+
+    await this.notifyCustomer(
+      input.customerId,
+      'Loan repayment submitted',
+      `Your cash loan repayment of ₦${input.amount.toLocaleString()} is pending manager approval.`,
+      'loan_repayment_pending',
+      'PaymentRequest',
+      request.id,
+    );
+
+    await this.notifyManagers(
+      'Loan repayment to approve',
+      `${loan.customer.firstName} ${loan.customer.lastName} paid ₦${input.amount.toLocaleString()} toward loan ${loan.loanNumber}.`,
+      'loan_repayment_pending',
+      request.id,
+    );
+
+    return request;
+  }
+
   async listPending(type?: PaymentRequestType, page = 1, limit = 20) {
     const { skip, take, page: p, limit: l } = paginate(page, limit);
 
@@ -254,6 +319,10 @@ export class OperationsService {
       return this.approveTransfer(request, actor, comment, externalBankRef);
     }
 
+    if (request.type === PaymentRequestType.LOAN_REPAYMENT) {
+      return this.approveLoanRepayment(request, actor, comment);
+    }
+
     throw new BadRequestException('Unsupported request type');
   }
 
@@ -265,7 +334,10 @@ export class OperationsService {
     }
 
     const updated = await this.prisma.$transaction(async (tx) => {
-      if (request.type !== PaymentRequestType.DEPOSIT) {
+      if (
+        request.type !== PaymentRequestType.DEPOSIT &&
+        request.type !== PaymentRequestType.LOAN_REPAYMENT
+      ) {
         await this.releaseHold(tx, request.accountId, Number(request.amount));
       }
 
@@ -415,11 +487,149 @@ export class OperationsService {
     comment?: string,
     externalBankRef?: string,
   ) {
-    if (!externalBankRef) {
+    const account = await this.prisma.account.findUnique({ where: { id: request.accountId } });
+    if (account?.type === AccountType.MY_PIKIN) {
+      if (account.maturityDate && account.maturityDate > new Date()) {
+        throw new BadRequestException(
+          `My Pikin account has not reached maturity (${account.maturityDate.toISOString().slice(0, 10)}).`,
+        );
+      }
+    }
+
+    const isCash = request.channel === PaymentChannel.CASH;
+    if (!isCash && !externalBankRef) {
       throw new BadRequestException('External bank reference is required for withdrawals');
     }
 
-    return this.completeOutbound(request, actor, TransactionType.WITHDRAWAL, comment, externalBankRef);
+    return this.completeOutbound(
+      request,
+      actor,
+      TransactionType.WITHDRAWAL,
+      comment,
+      externalBankRef || (isCash ? 'CASH' : undefined),
+    );
+  }
+
+  private async approveLoanRepayment(
+    request: Awaited<ReturnType<OperationsService['getRequest']>>,
+    actor: JwtPayload,
+    comment?: string,
+  ) {
+    if (!request.loanId) {
+      throw new BadRequestException('Loan repayment request is missing loan reference');
+    }
+
+    const amount = Number(request.amount);
+
+    return this.prisma.$transaction(async (tx) => {
+      const loan = await tx.loan.findUnique({
+        where: { id: request.loanId! },
+        include: {
+          schedules: { where: { isPaid: false }, orderBy: { installmentNumber: 'asc' } },
+        },
+      });
+      if (!loan) throw new NotFoundException('Loan not found');
+
+      const account = await tx.account.findUnique({ where: { id: request.accountId } });
+      if (!account) throw new NotFoundException('Account not found');
+
+      const balanceBefore = Number(account.balance);
+      const balanceAfter = balanceBefore;
+
+      await this.applyLoanPayment(tx, loan.id, amount);
+
+      const transaction = await tx.transaction.create({
+        data: {
+          reference: generateTransactionRef(),
+          type: TransactionType.LOAN_REPAYMENT,
+          status: TransactionStatus.COMPLETED,
+          amount,
+          balanceBefore,
+          balanceAfter,
+          narration: request.narration || `Loan repayment - ${loan.loanNumber}`,
+          accountId: request.accountId,
+          processedById: actor.sub,
+          paymentRequestId: request.id,
+          metadata: { loanId: loan.id, loanNumber: loan.loanNumber },
+        },
+      });
+
+      await tx.paymentRequestApproval.create({
+        data: {
+          paymentRequestId: request.id,
+          actorId: actor.sub,
+          action: ApprovalAction.APPROVE,
+          comment,
+        },
+      });
+
+      const updated = await tx.paymentRequest.update({
+        where: { id: request.id },
+        data: { status: PaymentRequestStatus.APPROVED },
+        include: this.requestIncludes(),
+      });
+
+      await this.notifyCustomerTx(
+        tx,
+        request.customerId!,
+        'Loan repayment recorded',
+        `₦${amount.toLocaleString()} has been applied to loan ${loan.loanNumber}.`,
+        'loan_repayment_approved',
+        'PaymentRequest',
+        request.id,
+      );
+
+      return { request: updated, transaction };
+    });
+  }
+
+  private async applyLoanPayment(
+    tx: Parameters<Parameters<PrismaService['$transaction']>[0]>[0],
+    loanId: string,
+    amount: number,
+  ) {
+    const loan = await tx.loan.findUnique({
+      where: { id: loanId },
+      include: {
+        schedules: { where: { isPaid: false }, orderBy: { installmentNumber: 'asc' } },
+      },
+    });
+    if (!loan) throw new NotFoundException('Loan not found');
+
+    let remaining = amount;
+    for (const schedule of loan.schedules) {
+      if (remaining <= 0) break;
+      const due = Number(schedule.totalDue) - Number(schedule.paidAmount);
+      const pay = Math.min(remaining, due);
+      const newPaid = Number(schedule.paidAmount) + pay;
+      const isPaid = newPaid >= Number(schedule.totalDue);
+
+      await tx.loanSchedule.update({
+        where: { id: schedule.id },
+        data: {
+          paidAmount: newPaid,
+          isPaid,
+          paidAt: isPaid ? new Date() : schedule.paidAt,
+        },
+      });
+      remaining -= pay;
+    }
+
+    const newOutstanding = Math.max(0, Number(loan.outstandingBalance) - amount);
+    const closed = newOutstanding <= 0;
+
+    await tx.loan.update({
+      where: { id: loanId },
+      data: {
+        outstandingBalance: newOutstanding,
+        status: closed
+          ? LoanStatus.CLOSED
+          : loan.status === LoanStatus.DISBURSED
+            ? LoanStatus.ACTIVE
+            : loan.status,
+        closedAt: closed ? new Date() : loan.closedAt,
+      },
+    });
   }
 
   private async approveTransfer(
@@ -611,6 +821,7 @@ export class OperationsService {
           },
         },
       },
+      loan: { select: { id: true, loanNumber: true, outstandingBalance: true, status: true } },
       initiatedBy: { select: { id: true, firstName: true, lastName: true, role: true } },
     } as const;
   }

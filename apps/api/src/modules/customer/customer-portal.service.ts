@@ -1,16 +1,26 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
-import { ApprovalAction, LoanStatus, PaymentChannel, AccountType } from '@tanjuriel/database';
+import {
+  ApprovalAction,
+  LoanStatus,
+  PaymentChannel,
+  AccountType,
+  NibssTransactionStatus,
+  NibssTransactionType,
+} from '@tanjuriel/database';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { OperationsService } from '../operations/operations.service';
 import { CustomerAuthService } from '../customer-auth/customer-auth.service';
+import { AlatService } from '../integrations/alat/alat.service';
 import {
   calculateLoanSchedule,
   generateLoanNumber,
+  generateTransactionRef,
   paginate,
   paginationMeta,
 } from '../../common/utils/reference.util';
-import { CustomerDepositRequestDto, CustomerTransferRequestDto } from '../operations/dto/operations.dto';
+import { CustomerDepositRequestDto, CustomerTransferRequestDto, CustomerWithdrawalRequestDto } from '../operations/dto/operations.dto';
 import { CustomerApplyLoanDto } from './dto/customer-loan.dto';
+import { NameEnquiryDto } from './dto/transfer.dto';
 import { ensureCustomerKycVerified } from '../../common/utils/kyc.util';
 import { validateCollateralInput } from '../../common/utils/customer-registration.util';
 
@@ -20,7 +30,58 @@ export class CustomerPortalService {
     private prisma: PrismaService,
     private operationsService: OperationsService,
     private customerAuthService: CustomerAuthService,
+    private alatService: AlatService,
   ) {}
+
+  async getTransferBanks() {
+    const { banks, source } = await this.alatService.getBanks();
+    return {
+      banks,
+      source,
+      nameEnquiryAvailable: this.alatService.isLiveConfigured(),
+      alatStatus: this.alatService.getStatus(),
+    };
+  }
+
+  async lookupTransferBeneficiary(dto: NameEnquiryDto) {
+    const result = await this.alatService.nameEnquiry(dto.bankCode, dto.accountNumber);
+
+    try {
+      await this.prisma.nibssTransaction.create({
+        data: {
+          reference: generateTransactionRef(),
+          sessionId: result.sessionId,
+          type: NibssTransactionType.NAME_ENQUIRY,
+          status:
+            result.responseCode === '00'
+              ? NibssTransactionStatus.SUCCESS
+              : NibssTransactionStatus.FAILED,
+          beneficiaryAccount: result.accountNumber,
+          beneficiaryBank: result.bankCode,
+          beneficiaryName: result.accountName || undefined,
+          responseCode: result.responseCode,
+          responseMessage: result.responseMessage,
+          rawResponse: result as object,
+        },
+      });
+    } catch {
+      // audit log must not block name enquiry
+    }
+
+    if (result.responseCode !== '00' || !result.accountName) {
+      throw new BadRequestException(
+        result.responseMessage || 'Could not verify account name. Check bank and account number.',
+      );
+    }
+
+    return {
+      account_number: result.accountNumber,
+      account_name: result.accountName,
+      bank_code: result.bankCode,
+      session_id: result.sessionId,
+      response_code: result.responseCode,
+    };
+  }
 
   async getProfile(customerId: string) {
     const customer = await this.prisma.customer.findUnique({
@@ -65,7 +126,9 @@ export class CustomerPortalService {
 
     const account = await this.prisma.account.findUnique({ where: { id: dto.accountId } });
     if (account?.type === AccountType.MY_PIKIN) {
-      throw new BadRequestException('My Pikin accounts cannot be withdrawn from. Funds are locked for the child.');
+      throw new BadRequestException(
+        'My Pikin accounts cannot be transferred from. After maturity, use Savings → Request withdrawal.',
+      );
     }
 
     const pinValid = await this.customerAuthService.verifyPin(customerId, dto.pin);
@@ -80,6 +143,44 @@ export class CustomerPortalService {
       narration: dto.narration,
       customerId,
     });
+  }
+
+  async createWithdrawalRequest(customerId: string, dto: CustomerWithdrawalRequestDto) {
+    await ensureCustomerKycVerified(this.prisma, customerId);
+    await this.ensureAccountOwnership(customerId, dto.accountId);
+
+    const account = await this.prisma.account.findUnique({ where: { id: dto.accountId } });
+    if (!account) throw new NotFoundException('Account not found');
+
+    this.assertMyPikinMobileWithdrawalAllowed(account);
+
+    const pinValid = await this.customerAuthService.verifyPin(customerId, dto.pin);
+    if (!pinValid) throw new BadRequestException('Invalid PIN');
+
+    const label = account.label ? ` (${account.label})` : '';
+    return this.operationsService.createWithdrawalRequest({
+      accountId: dto.accountId,
+      amount: dto.amount,
+      channel: PaymentChannel.CASH,
+      narration: dto.narration || `My Pikin withdrawal request${label} — collect cash at branch after approval`,
+      customerId,
+    });
+  }
+
+  private assertMyPikinMobileWithdrawalAllowed(account: {
+    type: AccountType;
+    maturityDate: Date | null;
+  }) {
+    if (account.type !== AccountType.MY_PIKIN) {
+      throw new BadRequestException(
+        'Mobile withdrawal requests are only available for My Pikin accounts after maturity.',
+      );
+    }
+    if (account.maturityDate && account.maturityDate > new Date()) {
+      throw new BadRequestException(
+        `My Pikin account matures on ${account.maturityDate.toISOString().slice(0, 10)}. You can request a withdrawal after that date.`,
+      );
+    }
   }
 
   async listPaymentRequests(customerId: string, page = 1, limit = 20) {
@@ -165,6 +266,9 @@ export class CustomerPortalService {
       transferFee: Number(process.env.TRANSFER_FEE ?? 25),
       pinLength: 4,
       currency: 'NGN',
+      nameEnquiryAvailable: this.alatService.isLiveConfigured(),
+      alatEnabled: this.alatService.isEnabled(),
+      alatStatus: this.alatService.getStatus(),
     };
   }
 

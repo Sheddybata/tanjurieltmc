@@ -6,9 +6,12 @@ import 'package:tanjuriel_microfinance/core/network/api_client.dart';
 import 'package:tanjuriel_microfinance/core/theme/app_colors.dart';
 import 'package:tanjuriel_microfinance/core/utils/json_utils.dart';
 import 'package:tanjuriel_microfinance/core/utils/kyc_guard.dart';
+import 'package:tanjuriel_microfinance/core/widgets/account_switcher.dart';
 import 'package:tanjuriel_microfinance/core/widgets/app_button.dart';
 import 'package:tanjuriel_microfinance/core/widgets/app_text_field.dart';
 import 'package:tanjuriel_microfinance/features/auth/presentation/providers/auth_provider.dart';
+import 'package:tanjuriel_microfinance/shared/providers/member_accounts_provider.dart';
+import 'package:tanjuriel_microfinance/shared/providers/repository_providers.dart';
 
 class FundAccountScreen extends ConsumerStatefulWidget {
   const FundAccountScreen({super.key});
@@ -56,9 +59,11 @@ class _FundAccountScreenState extends ConsumerState<FundAccountScreen> {
 
   Future<void> _submit() async {
     final user = ref.read(authProvider).user;
+    final selected = ref.read(selectedAccountProvider);
     if (!KycGuard.requireVerified(context, user)) return;
     final amount = double.tryParse(_amountController.text);
-    if (user?.accountId == null || amount == null || amount <= 0 || _selectedProvider == null) {
+    final accountId = selected?.id ?? user?.accountId;
+    if (accountId == null || amount == null || amount <= 0 || _selectedProvider == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Enter a valid amount and select a bank')),
       );
@@ -69,7 +74,7 @@ class _FundAccountScreenState extends ConsumerState<FundAccountScreen> {
     try {
       final api = ref.read(apiClientProvider);
       await api.post('/customer/deposit-requests', data: {
-        'accountId': user!.accountId,
+        'accountId': accountId,
         'amount': amount,
         'settlementProvider': _selectedProvider,
         if (_noteController.text.trim().isNotEmpty) 'customerNote': _noteController.text.trim(),
@@ -118,6 +123,11 @@ class _FundAccountScreenState extends ConsumerState<FundAccountScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  const SizedBox(height: 24),
+                  const Text('Credit to account'),
+                  const SizedBox(height: 8),
+                  const AccountSwitcher(),
+                  const SizedBox(height: 24),
                   Text(
                     'Transfer to Tanjuriel account',
                     style: Theme.of(context).textTheme.titleLarge,

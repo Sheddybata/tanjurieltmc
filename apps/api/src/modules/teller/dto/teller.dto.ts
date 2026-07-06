@@ -100,6 +100,39 @@ export class OpenAccountDto {
   @IsOptional()
   @IsString()
   appPin?: string;
+
+  @ApiPropertyOptional({ description: 'Child or account label (My Pikin)' })
+  @IsOptional()
+  @IsString()
+  label?: string;
+
+  @ApiPropertyOptional({ description: 'Maturity date for My Pikin withdrawals (ISO date)' })
+  @IsOptional()
+  @IsDateString()
+  maturityDate?: string;
+}
+
+export class EnableMobileAccessDto {
+  @ApiProperty({ description: '4-6 digit PIN for mobile login' })
+  @IsString()
+  @IsNotEmpty()
+  appPin: string;
+}
+
+export class LoanRepaymentDto {
+  @ApiProperty()
+  @IsUUID()
+  loanId: string;
+
+  @ApiProperty()
+  @IsNumber()
+  @Min(0.01)
+  amount: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  narration?: string;
 }
 
 export class TransactionDto {

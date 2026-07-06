@@ -6,6 +6,7 @@ import 'package:tanjuriel_microfinance/core/theme/app_colors.dart';
 import 'package:tanjuriel_microfinance/core/utils/currency_formatter.dart';
 import 'package:tanjuriel_microfinance/core/widgets/pin_input_field.dart';
 import 'package:tanjuriel_microfinance/shared/models/transfer_model.dart';
+import 'package:tanjuriel_microfinance/shared/providers/member_accounts_provider.dart';
 import 'package:tanjuriel_microfinance/shared/providers/repository_providers.dart';
 
 class TransferConfirmScreen extends ConsumerStatefulWidget {
@@ -54,15 +55,18 @@ class _TransferConfirmScreenState extends ConsumerState<TransferConfirmScreen> {
 
     setState(() => _isLoading = true);
     try {
+      final accountId = ref.read(selectedAccountProvider)?.id;
       final result = await ref.read(transferRepositoryProvider).initiateTransfer(
             TransferRequest(
-              destinationBankCode: widget.bank.code,
+              destinationBankCode: widget.bank.nibssCode,
               destinationAccountNumber: widget.accountNumber,
               amount: widget.amount,
               narration: widget.narration,
               sessionId: widget.sessionId,
               pin: pin,
+              accountId: accountId,
               beneficiaryName: widget.accountName,
+              beneficiaryBankName: widget.bank.name,
             ),
           );
 

@@ -5,12 +5,15 @@ import 'package:tanjuriel_microfinance/core/config/app_config.dart';
 import 'package:tanjuriel_microfinance/core/router/route_names.dart';
 import 'package:tanjuriel_microfinance/core/utils/greeting_util.dart';
 import 'package:tanjuriel_microfinance/core/utils/kyc_guard.dart';
+import 'package:tanjuriel_microfinance/core/widgets/account_switcher.dart';
 import 'package:tanjuriel_microfinance/core/widgets/kyc_pending_banner.dart';
 import 'package:tanjuriel_microfinance/core/widgets/masked_balance_card.dart';
 import 'package:tanjuriel_microfinance/core/widgets/quick_action_grid.dart';
 import 'package:tanjuriel_microfinance/core/widgets/transaction_tile.dart';
 import 'package:tanjuriel_microfinance/features/auth/presentation/providers/auth_provider.dart';
+import 'package:tanjuriel_microfinance/shared/models/member_account.dart';
 import 'package:tanjuriel_microfinance/shared/models/user_model.dart';
+import 'package:tanjuriel_microfinance/shared/providers/member_accounts_provider.dart';
 import 'package:tanjuriel_microfinance/shared/providers/repository_providers.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
@@ -32,10 +35,24 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   Future<void> _loadData() async {
     final data = await ref.read(accountRepositoryProvider).getDashboardData();
-    ref.read(authProvider.notifier).updateUser(data.user);
+    setMemberAccounts(ref, data.accounts);
+    final selected = ref.read(selectedAccountProvider);
+    ref.read(authProvider.notifier).updateUser(
+          data.user.copyWith(
+            accountId: selected?.id ?? data.user.accountId,
+            accountNumber: selected?.accountNumber ?? data.user.accountNumber,
+            accountType: selected?.type ?? data.user.accountType,
+          ),
+        );
     if (mounted) {
       setState(() {
-        _balance = data.balance;
+        _balance = selected != null
+            ? AccountBalance(
+                available: selected.availableBalance,
+                ledger: selected.balance,
+                currency: 'NGN',
+              )
+            : data.balance;
         _loading = false;
       });
     }
@@ -45,7 +62,30 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   Widget build(BuildContext context) {
     final user = ref.watch(authProvider).user;
     final isVisible = ref.watch(balanceVisibilityProvider);
+    final selectedAccount = ref.watch(selectedAccountProvider);
     final greeting = GreetingUtil.forNow();
+
+    ref.listen<MemberAccount?>(selectedAccountProvider, (previous, next) {
+      if (next != null && mounted) {
+        final currentUser = ref.read(authProvider).user;
+        setState(() {
+          _balance = AccountBalance(
+            available: next.availableBalance,
+            ledger: next.balance,
+            currency: 'NGN',
+          );
+        });
+        if (currentUser != null) {
+          ref.read(authProvider.notifier).updateUser(
+                currentUser.copyWith(
+                  accountId: next.id,
+                  accountNumber: next.accountNumber,
+                  accountType: next.type,
+                ),
+              );
+        }
+      }
+    });
 
     return Scaffold(
       appBar: AppBar(
@@ -104,14 +144,24 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     onToggleVisibility: () {
                       ref.read(balanceVisibilityProvider.notifier).state = !isVisible;
                     },
-                    accountNumber: user?.accountNumber,
-                    accountName: user?.fullName,
+                    accountNumber: selectedAccount?.accountNumber ?? user?.accountNumber,
+                    accountName: selectedAccount?.displayName ?? user?.fullName,
+                    trailing: const AccountSwitcher(compact: true),
                   ),
                   const SizedBox(height: 24),
                   Text('Quick Actions', style: Theme.of(context).textTheme.titleMedium),
                   const SizedBox(height: 12),
                   QuickActionGrid(
                     actions: [
+                      QuickAction(
+                        label: 'Transfer',
+                        icon: Icons.swap_horiz_rounded,
+                        onTap: () {
+                          if (KycGuard.requireVerified(context, user)) {
+                            context.push(RouteNames.transfer);
+                          }
+                        },
+                      ),
                       QuickAction(
                         label: 'Fund',
                         icon: Icons.add_card_rounded,
@@ -131,18 +181,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         },
                       ),
                       QuickAction(
-                        label: 'Transfer',
-                        icon: Icons.swap_horiz_rounded,
-                        onTap: () {
-                          if (KycGuard.requireVerified(context, user)) {
-                            context.go(RouteNames.transfer);
-                          }
-                        },
-                      ),
-                      QuickAction(
-                        label: 'History',
-                        icon: Icons.history_rounded,
-                        onTap: () => context.go(RouteNames.transactions),
+                        label: 'Savings',
+                        icon: Icons.savings_outlined,
+                        onTap: () => context.push(RouteNames.savings),
                       ),
                     ],
                   ),

@@ -2,7 +2,7 @@ import { Controller, Get, Post, Body, Param, Query, Patch, UseGuards } from '@ne
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { Permission, JwtPayload } from '@tanjuriel/shared';
 import { TellerService } from './teller.service';
-import { RegisterCustomerDto, OpenAccountDto, TransactionDto } from './dto/teller.dto';
+import { RegisterCustomerDto, OpenAccountDto, TransactionDto, EnableMobileAccessDto, LoanRepaymentDto } from './dto/teller.dto';
 import { JwtAuthGuard, PermissionsGuard } from '../../common/guards/auth.guards';
 import { Permissions, User } from '../../common/decorators/auth.decorators';
 
@@ -86,6 +86,22 @@ export class TellerController {
   @ApiOperation({ summary: 'Process a cash withdrawal' })
   async withdrawal(@Body() dto: TransactionDto, @User() user: JwtPayload) {
     const result = await this.tellerService.processWithdrawal(dto, user);
+    return { success: true, data: result };
+  }
+
+  @Patch('customers/:id/mobile-access')
+  @Permissions(Permission.OPEN_ACCOUNT)
+  @ApiOperation({ summary: 'Enable mobile app access and set PIN for a customer' })
+  async enableMobileAccess(@Param('id') id: string, @Body() dto: EnableMobileAccessDto) {
+    const customer = await this.tellerService.enableMobileAccess(id, dto);
+    return { success: true, data: customer };
+  }
+
+  @Post('loans/repay')
+  @Permissions(Permission.PROCESS_DEPOSIT)
+  @ApiOperation({ summary: 'Record cash loan repayment at branch (manager approval required)' })
+  async loanRepayment(@Body() dto: LoanRepaymentDto, @User() user: JwtPayload) {
+    const result = await this.tellerService.processLoanRepayment(dto, user);
     return { success: true, data: result };
   }
 

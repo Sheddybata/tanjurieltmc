@@ -11,6 +11,7 @@ class MaskedBalanceCard extends StatelessWidget {
     required this.onToggleVisibility,
     this.accountNumber,
     this.accountName,
+    this.trailing,
   });
 
   final double balance;
@@ -18,6 +19,7 @@ class MaskedBalanceCard extends StatelessWidget {
   final VoidCallback onToggleVisibility;
   final String? accountNumber;
   final String? accountName;
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -77,6 +79,10 @@ class MaskedBalanceCard extends StatelessWidget {
                 accountName!,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.white),
               ),
+            if (trailing != null) ...[
+              const SizedBox(height: 4),
+              trailing!,
+            ],
             if (accountNumber != null) ...[
               const SizedBox(height: 2),
               Text(

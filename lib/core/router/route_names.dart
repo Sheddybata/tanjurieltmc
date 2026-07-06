@@ -18,6 +18,8 @@ abstract final class RouteNames {
   static const loanSubmitted = '/loans/submitted';
   static const loanDetail = '/loans/:id';
   static const home = '/home';
+  static const savings = '/savings';
+  static const requestWithdrawal = '/savings/withdraw';
   static const transfer = '/transfer';
   static const transferConfirm = '/transfer/confirm';
   static const transferSuccess = '/transfer/success';

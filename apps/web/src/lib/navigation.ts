@@ -26,6 +26,8 @@ import {
 
   CreditCard,
 
+  Banknote,
+
   Settings,
 
   Scale,
@@ -105,6 +107,8 @@ export const NAV_ITEMS: NavItem[] = [
   { label: 'Deposits', href: '/teller/deposits', icon: ArrowDownLeft, roles: [UserRole.TELLER], group: 'teller' },
 
   { label: 'Withdrawals', href: '/teller/withdrawals', icon: ArrowUpRight, roles: [UserRole.TELLER], group: 'teller' },
+
+  { label: 'Loan Repayments', href: '/teller/loan-repayments', icon: Banknote, roles: [UserRole.TELLER], group: 'teller' },
 
   { label: 'Operations Queue', href: '/manager/operations', icon: ClipboardList, roles: [UserRole.MANAGER, UserRole.ADMIN], group: 'operations' },
 

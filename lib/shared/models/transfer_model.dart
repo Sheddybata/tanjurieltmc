@@ -10,10 +10,11 @@ class BankModel {
   final String nibssCode;
 
   factory BankModel.fromJson(Map<String, dynamic> json) {
+    final nibss = (json['nibssCode'] ?? json['nibss_code'] ?? json['code']) as String;
     return BankModel(
-      code: json['code'] as String,
+      code: nibss,
       name: json['name'] as String,
-      nibssCode: json['nibss_code'] as String,
+      nibssCode: nibss,
     );
   }
 }
@@ -25,6 +26,7 @@ class NameEnquiryResult {
     required this.bankCode,
     required this.sessionId,
     required this.responseCode,
+    this.responseMessage,
   });
 
   final String accountNumber;
@@ -32,6 +34,7 @@ class NameEnquiryResult {
   final String bankCode;
   final String sessionId;
   final String responseCode;
+  final String? responseMessage;
 
   bool get isSuccess => responseCode == '00';
 
@@ -42,6 +45,7 @@ class NameEnquiryResult {
       bankCode: json['bank_code'] as String,
       sessionId: json['session_id'] as String,
       responseCode: json['response_code'] as String,
+      responseMessage: json['response_message'] as String?,
     );
   }
 }
@@ -54,7 +58,9 @@ class TransferRequest {
     required this.narration,
     required this.sessionId,
     required this.pin,
+    this.accountId,
     this.beneficiaryName,
+    this.beneficiaryBankName,
   });
 
   final String destinationBankCode;
@@ -63,7 +69,9 @@ class TransferRequest {
   final String narration;
   final String sessionId;
   final String pin;
+  final String? accountId;
   final String? beneficiaryName;
+  final String? beneficiaryBankName;
 
   Map<String, dynamic> toJson() => {
         'destination_bank_code': destinationBankCode,

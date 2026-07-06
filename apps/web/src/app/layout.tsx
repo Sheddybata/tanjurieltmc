@@ -4,8 +4,12 @@ import { ToastProvider } from '@/components/ui/toast-provider';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Tanjuriel Microfinance Platform',
-  description: 'Enterprise admin and teller platform for microfinance institutions',
+  title: {
+    default: 'Tanjuriel Microfinance',
+    template: '%s | Tanjuriel Microfinance',
+  },
+  description:
+    'Daily Savings, My Pikin Savings, personal and business loans — accessible financial services for Nigerian communities.',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

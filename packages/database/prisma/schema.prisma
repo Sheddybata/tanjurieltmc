@@ -140,6 +140,7 @@ enum PaymentRequestType {
   WITHDRAWAL
   TRANSFER
   BILL_PAYMENT
+  LOAN_REPAYMENT
 }
 
 enum PaymentRequestStatus {
@@ -283,6 +284,8 @@ model Account {
   heldBalance      Decimal       @default(0) @db.Decimal(18, 2)
   currency         String        @default("NGN")
   interestRate   Decimal?      @db.Decimal(5, 4)
+  label          String?
+  maturityDate   DateTime?
   customerId     String
   branchId       String
   openedById     String
@@ -395,6 +398,7 @@ model Loan {
   branch     Branch         @relation(fields: [branchId], references: [id])
   approvals  LoanApproval[]
   schedules  LoanSchedule[]
+  paymentRequests PaymentRequest[]
 
   @@index([customerId])
   @@index([status])
@@ -564,11 +568,13 @@ model PaymentRequest {
   customerNote        String?
   externalBankRef     String?
   narration           String?
+  loanId              String?
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
 
   account       Account                  @relation(fields: [accountId], references: [id])
   customer      Customer?                @relation(fields: [customerId], references: [id])
+  loan          Loan?                    @relation(fields: [loanId], references: [id])
   initiatedBy   User?                    @relation("InitiatedRequests", fields: [initiatedByStaffId], references: [id])
   approvals     PaymentRequestApproval[]
   transaction   Transaction?

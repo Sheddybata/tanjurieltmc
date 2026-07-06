@@ -1,31 +1,40 @@
 import 'package:tanjuriel_microfinance/core/constants/nibss_codes.dart';
+import 'package:tanjuriel_microfinance/core/errors/app_exception.dart';
 import 'package:tanjuriel_microfinance/core/network/api_client.dart';
+import 'package:tanjuriel_microfinance/core/utils/json_utils.dart';
 import 'package:tanjuriel_microfinance/features/auth/data/repositories/auth_repository_impl.dart';
 import 'package:tanjuriel_microfinance/features/transfer/domain/repositories/transfer_repository.dart';
 import 'package:tanjuriel_microfinance/shared/models/transfer_model.dart';
-import 'package:uuid/uuid.dart';
 
 class TransferRepositoryImpl implements TransferRepository {
   TransferRepositoryImpl(this._api);
 
   final ApiClient _api;
 
-  static final _banks = [
-    const BankModel(code: '044', name: 'Access Bank', nibssCode: '000014'),
-    const BankModel(code: '058', name: 'GTBank', nibssCode: '000013'),
-    const BankModel(code: '011', name: 'First Bank', nibssCode: '000016'),
-    const BankModel(code: '033', name: 'UBA', nibssCode: '000004'),
-    const BankModel(code: '057', name: 'Zenith Bank', nibssCode: '000015'),
-    const BankModel(code: '070', name: 'Fidelity Bank', nibssCode: '000007'),
-    const BankModel(code: '032', name: 'Union Bank', nibssCode: '000018'),
-    const BankModel(code: '035', name: 'Wema Bank', nibssCode: '000017'),
-  ];
-
-  final _sessionCache = <String, NameEnquiryResult>{};
-
   @override
   Future<List<BankModel>> getBanks() async {
-    return _banks;
+    final response = await _api.get<Map<String, dynamic>>('/customer/transfers/banks');
+    final body = response.data;
+    if (body?['success'] != true) {
+      throw NetworkException('Unable to load banks');
+    }
+
+    final data = body!['data'] as Map<String, dynamic>?;
+    final banksRaw = data?['banks'] as List<dynamic>? ?? [];
+    return banksRaw
+        .map((e) => BankModel.fromJson(Map<String, dynamic>.from(e as Map)))
+        .toList();
+  }
+
+  @override
+  Future<bool> isNameEnquiryAvailable() async {
+    try {
+      final response = await _api.get<Map<String, dynamic>>('/customer/app-config');
+      final data = response.data?['data'] as Map<String, dynamic>?;
+      return data?['nameEnquiryAvailable'] == true;
+    } catch (_) {
+      return false;
+    }
   }
 
   @override
@@ -33,27 +42,36 @@ class TransferRepositoryImpl implements TransferRepository {
     required String bankCode,
     required String accountNumber,
   }) async {
-    if (accountNumber == '0000000000') {
+    final response = await _api.post<Map<String, dynamic>>(
+      '/customer/transfers/name-enquiry',
+      data: {
+        'bankCode': bankCode,
+        'accountNumber': accountNumber,
+      },
+    );
+
+    final body = response.data;
+    if (body?['success'] != true) {
+      final message = JsonUtils.parseString(body?['message'], fallback: 'Name enquiry failed');
       return NameEnquiryResult(
         accountNumber: accountNumber,
         accountName: '',
         bankCode: bankCode,
         sessionId: '',
         responseCode: NibssResponseCodes.invalidAccount,
+        responseMessage: message,
       );
     }
 
-    final sessionId = const Uuid().v4();
-    final result = NameEnquiryResult(
-      accountNumber: accountNumber,
-      accountName: 'ACCOUNT HOLDER',
-      bankCode: bankCode,
-      sessionId: sessionId,
-      responseCode: NibssResponseCodes.approved,
+    final data = Map<String, dynamic>.from(body!['data'] as Map);
+    return NameEnquiryResult(
+      accountNumber: JsonUtils.parseString(data['account_number'], fallback: accountNumber),
+      accountName: JsonUtils.parseString(data['account_name']),
+      bankCode: JsonUtils.parseString(data['bank_code'], fallback: bankCode),
+      sessionId: JsonUtils.parseString(data['session_id']),
+      responseCode: JsonUtils.parseString(data['response_code'], fallback: NibssResponseCodes.approved),
+      responseMessage: 'Approved',
     );
-
-    _sessionCache[sessionId] = result;
-    return result;
   }
 
   @override
@@ -69,8 +87,7 @@ class TransferRepositoryImpl implements TransferRepository {
 
   @override
   Future<TransferResult> initiateTransfer(TransferRequest request) async {
-    final user = AuthRepositoryImpl.currentUser;
-    final accountId = user?.accountId;
+    final accountId = request.accountId ?? AuthRepositoryImpl.currentUser?.accountId;
 
     if (accountId == null) {
       return TransferResult(
@@ -84,18 +101,13 @@ class TransferRepositoryImpl implements TransferRepository {
       );
     }
 
-    final bank = _banks.firstWhere(
-      (b) => b.code == request.destinationBankCode,
-      orElse: () => _banks.first,
-    );
-
     try {
       final response = await _api.post<Map<String, dynamic>>(
         '/customer/transfer-requests',
         data: {
           'accountId': accountId,
           'amount': request.amount,
-          'beneficiaryBank': bank.name,
+          'beneficiaryBank': request.beneficiaryBankName ?? request.destinationBankCode,
           'beneficiaryAccount': request.destinationAccountNumber,
           'beneficiaryName': request.beneficiaryName ?? 'Beneficiary',
           'pin': request.pin,
@@ -109,7 +121,7 @@ class TransferRepositoryImpl implements TransferRepository {
           reference: '',
           sessionId: request.sessionId,
           responseCode: '96',
-          responseMessage: body?['message'] as String? ?? 'Transfer request failed',
+          responseMessage: JsonUtils.parseString(body?['message'], fallback: 'Transfer request failed'),
           amount: request.amount,
           fee: 0,
           status: 'failed',
@@ -119,7 +131,7 @@ class TransferRepositoryImpl implements TransferRepository {
       final data = body!['data'] as Map<String, dynamic>;
       final fee = (data['fee'] as num?)?.toDouble() ?? await getTransferFee();
       return TransferResult(
-        reference: data['reference'] as String? ?? '',
+        reference: JsonUtils.parseString(data['reference']),
         sessionId: request.sessionId,
         responseCode: '00',
         responseMessage: 'Transfer submitted for manager approval',

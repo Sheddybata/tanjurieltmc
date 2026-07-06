@@ -138,8 +138,55 @@ async function main() {
       accountNumber: '9012345678',
       type: AccountType.SAVINGS,
       status: AccountStatus.ACTIVE,
-      balance: 0,
-      availableBalance: 0,
+      balance: 50000,
+      availableBalance: 50000,
+      heldBalance: 0,
+      customerId: demoCustomer.id,
+      branchId: branch.id,
+      openedById: teller.id,
+      openedAt: new Date(),
+    },
+  });
+
+  await prisma.account.upsert({
+    where: { accountNumber: '9012345679' },
+    update: {
+      type: AccountType.DAILY_SAVINGS,
+      status: AccountStatus.ACTIVE,
+    },
+    create: {
+      accountNumber: '9012345679',
+      type: AccountType.DAILY_SAVINGS,
+      status: AccountStatus.ACTIVE,
+      balance: 12000,
+      availableBalance: 12000,
+      heldBalance: 0,
+      customerId: demoCustomer.id,
+      branchId: branch.id,
+      openedById: teller.id,
+      openedAt: new Date(),
+    },
+  });
+
+  const pikinMaturity = new Date();
+  pikinMaturity.setFullYear(pikinMaturity.getFullYear() + 5);
+
+  await prisma.account.upsert({
+    where: { accountNumber: '9012345680' },
+    update: {
+      type: AccountType.MY_PIKIN,
+      status: AccountStatus.ACTIVE,
+      label: 'Ada Demo',
+      maturityDate: pikinMaturity,
+    },
+    create: {
+      accountNumber: '9012345680',
+      type: AccountType.MY_PIKIN,
+      status: AccountStatus.ACTIVE,
+      label: 'Ada Demo',
+      maturityDate: pikinMaturity,
+      balance: 25000,
+      availableBalance: 25000,
       heldBalance: 0,
       customerId: demoCustomer.id,
       branchId: branch.id,

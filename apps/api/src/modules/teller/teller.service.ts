@@ -10,7 +10,7 @@ import {
 
 } from '@nestjs/common';
 
-import { AccountStatus, AccountType, CustomerKycStatus, PaymentChannel } from '@tanjuriel/database';
+import { AccountStatus, AccountType, CustomerKycStatus, LoanStatus, PaymentChannel } from '@tanjuriel/database';
 
 import { JwtPayload, Permission } from '@tanjuriel/shared';
 
@@ -30,7 +30,7 @@ import {
 
 } from '../../common/utils/reference.util';
 
-import { RegisterCustomerDto, OpenAccountDto, TransactionDto } from './dto/teller.dto';
+import { RegisterCustomerDto, OpenAccountDto, TransactionDto, EnableMobileAccessDto, LoanRepaymentDto } from './dto/teller.dto';
 
 import { OperationsService } from '../operations/operations.service';
 
@@ -192,7 +192,9 @@ export class TellerService {
 
     if (!customer) throw new NotFoundException('Customer not found');
 
-
+    if (dto.type === AccountType.MY_PIKIN && !dto.maturityDate) {
+      throw new BadRequestException('Maturity date is required for My Pikin accounts');
+    }
 
     if (dto.appPin) {
 
@@ -219,9 +221,9 @@ export class TellerService {
           accountNumber: generateAccountNumber(),
 
           type: dto.type,
-
           status: AccountStatus.ACTIVE,
-
+          label: dto.label,
+          maturityDate: dto.maturityDate ? new Date(dto.maturityDate) : undefined,
           customerId: dto.customerId,
 
           branchId: user.branchId!,
@@ -301,11 +303,6 @@ export class TellerService {
 
 
   async processWithdrawal(dto: TransactionDto, user: JwtPayload) {
-    const account = await this.prisma.account.findUnique({ where: { id: dto.accountId } });
-    if (account?.type === AccountType.MY_PIKIN) {
-      throw new BadRequestException('My Pikin accounts cannot be withdrawn from.');
-    }
-
     const request = await this.operationsService.createWithdrawalRequest({
 
       accountId: dto.accountId,
@@ -324,6 +321,51 @@ export class TellerService {
 
     return { paymentRequest: request, message: 'Withdrawal submitted for manager approval' };
 
+  }
+
+  async enableMobileAccess(customerId: string, dto: EnableMobileAccessDto) {
+    const customer = await this.prisma.customer.findUnique({ where: { id: customerId } });
+    if (!customer) throw new NotFoundException('Customer not found');
+
+    const pinHash = await bcrypt.hash(dto.appPin, 12);
+    return this.prisma.customer.update({
+      where: { id: customerId },
+      data: { pinHash, appEnabled: true },
+    });
+  }
+
+  async processLoanRepayment(dto: LoanRepaymentDto, user: JwtPayload) {
+    const loan = await this.prisma.loan.findUnique({ where: { id: dto.loanId } });
+    if (!loan) throw new NotFoundException('Loan not found');
+    if (!([LoanStatus.DISBURSED, LoanStatus.ACTIVE, LoanStatus.OVERDUE] as LoanStatus[]).includes(loan.status)) {
+      throw new BadRequestException('Loan is not active for repayment');
+    }
+    if (dto.amount > Number(loan.outstandingBalance)) {
+      throw new BadRequestException('Repayment amount exceeds outstanding balance');
+    }
+
+    const savingsAccount =
+      (await this.prisma.account.findFirst({
+        where: { customerId: loan.customerId, type: AccountType.SAVINGS, status: AccountStatus.ACTIVE },
+      })) ??
+      (await this.prisma.account.findFirst({
+        where: { customerId: loan.customerId, status: AccountStatus.ACTIVE },
+      }));
+
+    if (!savingsAccount) {
+      throw new BadRequestException('Customer has no active account to record repayment against');
+    }
+
+    const request = await this.operationsService.createLoanRepaymentRequest({
+      loanId: dto.loanId,
+      accountId: savingsAccount.id,
+      amount: dto.amount,
+      customerId: loan.customerId,
+      initiatedByStaffId: user.sub,
+      narration: dto.narration || `Cash loan repayment - ${loan.loanNumber}`,
+    });
+
+    return { paymentRequest: request, message: 'Loan repayment submitted for manager approval' };
   }
 
 

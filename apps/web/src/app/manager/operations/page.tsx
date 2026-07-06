@@ -36,6 +36,9 @@ interface PaymentRequest {
   createdAt: string;
   account: {
     accountNumber: string;
+    type?: string;
+    label?: string;
+    maturityDate?: string;
     customer: {
       firstName: string;
       lastName: string;
@@ -43,6 +46,7 @@ interface PaymentRequest {
       paymentRef: string;
     };
   };
+  loan?: { loanNumber: string; outstandingBalance: number };
   initiatedBy?: { firstName: string; lastName: string; role: string };
 }
 
@@ -99,14 +103,15 @@ export default function OperationsPage() {
       DEPOSIT: requests.filter((r) => r.type === 'DEPOSIT').length,
       WITHDRAWAL: requests.filter((r) => r.type === 'WITHDRAWAL').length,
       TRANSFER: requests.filter((r) => r.type === 'TRANSFER').length,
+      LOAN_REPAYMENT: requests.filter((r) => r.type === 'LOAN_REPAYMENT').length,
     }),
     [requests],
   );
 
-  async function handleApprove(id: string, type: string) {
+  async function handleApprove(id: string, type: string, channel: string) {
     setActionLoading(id);
     try {
-      const needsRef = type === 'WITHDRAWAL' || type === 'TRANSFER';
+      const needsRef = (type === 'WITHDRAWAL' || type === 'TRANSFER') && channel !== 'CASH';
       const externalBankRef = bankRefs[id];
       if (needsRef && !externalBankRef?.trim()) {
         showToast('Enter the bank transfer reference before approving', 'error');
@@ -157,6 +162,7 @@ export default function OperationsPage() {
             { id: 'DEPOSIT', label: 'Deposits', count: counts.DEPOSIT },
             { id: 'WITHDRAWAL', label: 'Withdrawals', count: counts.WITHDRAWAL },
             { id: 'TRANSFER', label: 'Transfers', count: counts.TRANSFER },
+            { id: 'LOAN_REPAYMENT', label: 'Loan repayments', count: counts.LOAN_REPAYMENT },
           ]}
           active={filter}
           onChange={setFilter}
@@ -173,7 +179,7 @@ export default function OperationsPage() {
               <EmptyState
                 icon={Inbox}
                 title="Queue is clear"
-                description="No pending deposits, withdrawals, or transfers right now."
+                description="No pending deposits, withdrawals, transfers, or loan repayments right now."
               />
             }
             listHeader={
@@ -222,6 +228,21 @@ export default function OperationsPage() {
                       <DetailField label="Channel" value={selected.channel.replace(/_/g, ' ')} />
                       <DetailField label="Reference" value={<span className="font-mono text-xs">{selected.reference}</span>} />
                       <DetailField label="Submitted" value={formatDate(selected.createdAt)} />
+                      {selected.account.type && (
+                        <DetailField label="Account type" value={selected.account.type.replace(/_/g, ' ')} />
+                      )}
+                      {selected.account.label && (
+                        <DetailField label="Account label" value={selected.account.label} />
+                      )}
+                      {selected.account.type === 'MY_PIKIN' && selected.account.maturityDate && (
+                        <DetailField label="Maturity date" value={formatDate(selected.account.maturityDate)} />
+                      )}
+                      {selected.loan && (
+                        <DetailField
+                          label="Loan"
+                          value={`${selected.loan.loanNumber} (${formatCurrency(Number(selected.loan.outstandingBalance))} outstanding)`}
+                        />
+                      )}
                       {selected.settlementProvider && (
                         <DetailField label="Settlement bank" value={selected.settlementProvider} />
                       )}
@@ -246,13 +267,16 @@ export default function OperationsPage() {
 
                     <div className="rounded-xl border border-gray-200 bg-white p-5">
                       <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-gray-500">Manager action</p>
-                      {(selected.type === 'WITHDRAWAL' || selected.type === 'TRANSFER') && (
+                      {(selected.type === 'WITHDRAWAL' || selected.type === 'TRANSFER') && selected.channel !== 'CASH' && (
                         <Input
                           label="Bank transfer reference"
                           placeholder="Enter ref from Zenith / Opay / Moniepoint"
                           value={bankRefs[selected.id] || ''}
                           onChange={(e) => setBankRefs((prev) => ({ ...prev, [selected.id]: e.target.value }))}
                         />
+                      )}
+                      {(selected.type === 'WITHDRAWAL' || selected.type === 'TRANSFER') && selected.channel === 'CASH' && (
+                        <p className="mb-3 text-sm text-gray-600">Cash at branch — no bank reference required.</p>
                       )}
                       <Input
                         label="Rejection reason (optional)"
@@ -264,7 +288,7 @@ export default function OperationsPage() {
                         <Button
                           className="flex-1"
                           loading={actionLoading === selected.id}
-                          onClick={() => handleApprove(selected.id, selected.type)}
+                          onClick={() => handleApprove(selected.id, selected.type, selected.channel)}
                         >
                           Approve
                         </Button>

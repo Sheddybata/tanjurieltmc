@@ -13,7 +13,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!isLoading && !user) {
-      router.push('/login');
+      router.push('/staff/login');
     }
   }, [user, isLoading, router]);
 

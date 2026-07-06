@@ -94,7 +94,31 @@ class MockApiHandler {
       case '/customer/me':
         return _response(_customerPayload());
       case '/customer/app-config':
-        return _response({'success': true, 'data': {'transferFee': 25, 'pinLength': 4, 'currency': 'NGN'}});
+        return _response({
+          'success': true,
+          'data': {
+            'transferFee': 25,
+            'pinLength': 4,
+            'currency': 'NGN',
+            'nameEnquiryAvailable': true,
+            'alatEnabled': false,
+          },
+        });
+      case '/customer/transfers/banks':
+        return _response({
+          'success': true,
+          'data': {
+            'banks': [
+              {'code': '000014', 'name': 'Access Bank', 'nibssCode': '000014'},
+              {'code': '000013', 'name': 'GTBank', 'nibssCode': '000013'},
+              {'code': '000016', 'name': 'First Bank of Nigeria', 'nibssCode': '000016'},
+              {'code': '000004', 'name': 'UBA', 'nibssCode': '000004'},
+              {'code': '000015', 'name': 'Zenith Bank', 'nibssCode': '000015'},
+            ],
+            'source': 'fallback',
+            'nameEnquiryAvailable': true,
+          },
+        });
       case '/customer/transactions':
         return _response({'success': true, 'data': _transactions()});
       case '/customer/settlement-accounts':
@@ -160,6 +184,34 @@ class MockApiHandler {
             'reference': 'TRF-MOCK-${DateTime.now().millisecondsSinceEpoch}',
             'status': 'PENDING',
             'fee': 25,
+          },
+        });
+      case '/customer/withdrawal-requests':
+        return _response({
+          'success': true,
+          'data': {
+            'id': 'mock-withdrawal-${DateTime.now().millisecondsSinceEpoch}',
+            'reference': 'WDR-MOCK-${DateTime.now().millisecondsSinceEpoch}',
+            'status': 'PENDING',
+            'type': 'WITHDRAWAL',
+          },
+        });
+      case '/customer/transfers/name-enquiry':
+        final account = (body['accountNumber'] as String?)?.trim() ?? '';
+        if (account == '0000000000') {
+          return _response({
+            'success': false,
+            'message': 'Invalid account number',
+          });
+        }
+        return _response({
+          'success': true,
+          'data': {
+            'account_number': account,
+            'account_name': 'DEMO ACCOUNT HOLDER',
+            'bank_code': body['bankCode'] ?? '000013',
+            'session_id': 'mock-session-${DateTime.now().millisecondsSinceEpoch}',
+            'response_code': '00',
           },
         });
       case '/customer/loans/apply':

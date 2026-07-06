@@ -1,6 +1,7 @@
-import { IsString, IsOptional, IsEnum, IsUUID, IsNumber, Min } from 'class-validator';
+import { IsString, IsOptional, IsEnum, IsNumber, Min } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { PaymentRequestType, SettlementProvider } from '@tanjuriel/database';
+import { IsEntityId } from '../../../common/validators/entity-id.decorator';
 
 export class ApproveRequestDto {
   @ApiPropertyOptional()
@@ -38,7 +39,7 @@ export class ListPendingDto {
 
 export class CustomerDepositRequestDto {
   @ApiProperty()
-  @IsUUID()
+  @IsEntityId()
   accountId: string;
 
   @ApiProperty()
@@ -58,7 +59,7 @@ export class CustomerDepositRequestDto {
 
 export class CustomerTransferRequestDto {
   @ApiProperty()
-  @IsUUID()
+  @IsEntityId()
   accountId: string;
 
   @ApiProperty()
@@ -90,7 +91,7 @@ export class CustomerTransferRequestDto {
 
 export class CustomerWithdrawalRequestDto {
   @ApiProperty()
-  @IsUUID()
+  @IsEntityId()
   accountId: string;
 
   @ApiProperty()

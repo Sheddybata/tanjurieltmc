@@ -1,14 +1,15 @@
-import { IsUUID, IsNumber, IsOptional, IsString, Min, IsEnum } from 'class-validator';
+import { IsNumber, IsOptional, IsString, Min, IsEnum } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { LoanStatus } from '@tanjuriel/database';
+import { IsEntityId } from '../../../common/validators/entity-id.decorator';
 
 export class CreateLoanDto {
   @ApiProperty()
-  @IsUUID()
+  @IsEntityId()
   customerId: string;
 
   @ApiProperty()
-  @IsUUID()
+  @IsEntityId()
   productId: string;
 
   @ApiProperty()

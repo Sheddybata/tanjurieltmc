@@ -5,12 +5,12 @@ import {
   IsEnum,
   IsDateString,
   IsNumber,
-  IsUUID,
   Min,
   IsNotEmpty,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Gender, AccountType } from '@tanjuriel/database';
+import { IsEntityId } from '../../../common/validators/entity-id.decorator';
 
 export class RegisterCustomerDto {
   @ApiProperty()
@@ -84,7 +84,7 @@ export class RegisterCustomerDto {
 
 export class OpenAccountDto {
   @ApiProperty()
-  @IsUUID()
+  @IsEntityId()
   customerId: string;
 
   @ApiProperty({ enum: AccountType })
@@ -121,7 +121,7 @@ export class EnableMobileAccessDto {
 
 export class LoanRepaymentDto {
   @ApiProperty()
-  @IsUUID()
+  @IsEntityId()
   loanId: string;
 
   @ApiProperty()
@@ -137,7 +137,7 @@ export class LoanRepaymentDto {
 
 export class TransactionDto {
   @ApiProperty()
-  @IsUUID()
+  @IsEntityId()
   accountId: string;
 
   @ApiProperty()

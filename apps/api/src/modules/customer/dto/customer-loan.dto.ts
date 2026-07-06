@@ -6,14 +6,14 @@ import {
   IsNumber,
   IsOptional,
   IsString,
-  IsUUID,
   Min,
   MinLength,
 } from 'class-validator';
+import { IsEntityId } from '../../../common/validators/entity-id.decorator';
 
 export class CustomerApplyLoanDto {
   @ApiProperty()
-  @IsUUID()
+  @IsEntityId()
   productId: string;
 
   @ApiProperty()

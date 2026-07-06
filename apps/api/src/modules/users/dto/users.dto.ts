@@ -1,6 +1,7 @@
-import { IsEmail, IsEnum, IsOptional, IsString, MinLength, IsUUID } from 'class-validator';
+import { IsEmail, IsEnum, IsOptional, IsString, MinLength } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { UserRole, UserStatus } from '@tanjuriel/database';
+import { IsEntityId } from '../../../common/validators/entity-id.decorator';
 
 export class CreateUserDto {
   @ApiProperty()
@@ -35,7 +36,7 @@ export class CreateUserDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsUUID()
+  @IsEntityId()
   branchId?: string;
 }
 
@@ -67,6 +68,6 @@ export class UpdateUserDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsUUID()
+  @IsEntityId()
   branchId?: string;
 }

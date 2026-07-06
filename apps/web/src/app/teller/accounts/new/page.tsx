@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { api } from '@/lib/api';
-import { parseMoneyAmount } from '@/lib/utils';
+import { formatMoneyForApi } from '@/lib/utils';
 import { TELLER_OPEN_ACCOUNT_TYPES } from '@/lib/account-types';
 
 interface CustomerOption {
@@ -64,7 +64,7 @@ function OpenAccountForm() {
         customerId,
         type: accountType,
         initialDeposit: form.get('initialDeposit')
-          ? parseMoneyAmount(String(form.get('initialDeposit')))
+          ? formatMoneyForApi(String(form.get('initialDeposit')))
           : undefined,
         appPin: form.get('appPin') || undefined,
         label: form.get('label') || undefined,

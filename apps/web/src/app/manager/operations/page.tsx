@@ -194,7 +194,7 @@ export default function OperationsPage() {
                 onClick={() => setSelectedId(req.id)}
                 title={`${req.account.customer.firstName} ${req.account.customer.lastName}`}
                 subtitle={req.reference}
-                amount={formatCurrency(Number(req.amount))}
+                amount={formatCurrency(req.amount)}
                 meta={formatDate(req.createdAt)}
                 badges={
                   <>
@@ -214,7 +214,7 @@ export default function OperationsPage() {
                   <div className="space-y-6">
                     <div className="rounded-xl border border-gray-100 bg-white p-5">
                       <p className="font-display text-3xl font-bold text-brand-700">
-                        {formatCurrency(Number(selected.amount))}
+                        {formatCurrency(selected.amount)}
                       </p>
                       <p className="mt-2 text-lg font-semibold text-gray-900">
                         {selected.account.customer.firstName} {selected.account.customer.lastName}

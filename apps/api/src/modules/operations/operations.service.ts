@@ -24,7 +24,22 @@ import {
   paginate,
   paginationMeta,
 } from '../../common/utils/reference.util';
-import { normalizeMoneyAmount, toMoneyDecimalString } from '../../common/utils/money.util';
+import {
+  assertPositiveKobo,
+  addKobo,
+  compareKobo,
+  formatKoboAsDecimal,
+  koboToMajorUnits,
+  maxKobo,
+  minKobo,
+  parseMoneyToKobo,
+  subtractKobo,
+} from '../../common/utils/money.util';
+import {
+  applyBalanceDelta,
+  applyHoldDelta,
+  readAccountKobo,
+} from '../../common/utils/money-ledger.util';
 
 export interface CreateDepositRequestInput {
   accountId: string;
@@ -71,7 +86,7 @@ export class OperationsService {
 
   async createDepositRequest(input: CreateDepositRequestInput) {
     const account = await this.getActiveAccount(input.accountId);
-    const amount = normalizeMoneyAmount(input.amount);
+    const amountKobo = assertPositiveKobo(input.amount);
 
     if (input.channel === PaymentChannel.BANK_TRANSFER && !input.settlementProvider) {
       throw new BadRequestException('Settlement provider is required for bank transfer deposits');
@@ -82,7 +97,7 @@ export class OperationsService {
         reference: generatePaymentRequestRef(),
         type: PaymentRequestType.DEPOSIT,
         status: PaymentRequestStatus.PENDING,
-        amount: toMoneyDecimalString(amount),
+        amount: formatKoboAsDecimal(amountKobo),
         channel: input.channel,
         accountId: input.accountId,
         customerId: input.customerId ?? account.customerId,
@@ -97,7 +112,7 @@ export class OperationsService {
     await this.notifyCustomer(
       request.customerId!,
       'Deposit submitted',
-      `Your deposit request of ₦${amount.toLocaleString()} is pending manager approval.`,
+      `Your deposit request of ₦${koboToMajorUnits(amountKobo).toLocaleString()} is pending manager approval.`,
       'deposit_pending',
       'PaymentRequest',
       request.id,
@@ -105,7 +120,7 @@ export class OperationsService {
 
     await this.notifyManagers(
       'New deposit to approve',
-      `${request.account.customer.firstName} ${request.account.customer.lastName} submitted a deposit of ₦${amount.toLocaleString()}.`,
+      `${request.account.customer.firstName} ${request.account.customer.lastName} submitted a deposit of ₦${koboToMajorUnits(amountKobo).toLocaleString()}.`,
       'deposit_pending',
       request.id,
     );
@@ -114,19 +129,19 @@ export class OperationsService {
   }
 
   async createWithdrawalRequest(input: CreateWithdrawalRequestInput) {
-    const amount = normalizeMoneyAmount(input.amount);
+    const amountKobo = assertPositiveKobo(input.amount);
     const account = await this.getActiveAccount(input.accountId);
-    this.ensureAvailableBalance(account, amount);
+    this.ensureAvailableBalance(account, amountKobo);
 
     const request = await this.prisma.$transaction(async (tx) => {
-      await this.holdFunds(tx, input.accountId, amount);
+      await this.holdFunds(tx, input.accountId, amountKobo);
 
       return tx.paymentRequest.create({
         data: {
           reference: generatePaymentRequestRef(),
           type: PaymentRequestType.WITHDRAWAL,
           status: PaymentRequestStatus.PENDING,
-          amount: toMoneyDecimalString(amount),
+          amount: formatKoboAsDecimal(amountKobo),
           channel: input.channel,
           accountId: input.accountId,
           customerId: input.customerId ?? account.customerId,
@@ -140,7 +155,7 @@ export class OperationsService {
     await this.notifyCustomer(
       request.customerId!,
       'Withdrawal submitted',
-      `Your withdrawal request of ₦${amount.toLocaleString()} is pending manager approval.`,
+      `Your withdrawal request of ₦${koboToMajorUnits(amountKobo).toLocaleString()} is pending manager approval.`,
       'withdrawal_pending',
       'PaymentRequest',
       request.id,
@@ -148,7 +163,7 @@ export class OperationsService {
 
     await this.notifyManagers(
       'New withdrawal to approve',
-      `${request.account.customer.firstName} ${request.account.customer.lastName} requested a withdrawal of ₦${amount.toLocaleString()}.`,
+      `${request.account.customer.firstName} ${request.account.customer.lastName} requested a withdrawal of ₦${koboToMajorUnits(amountKobo).toLocaleString()}.`,
       'withdrawal_pending',
       request.id,
     );
@@ -157,24 +172,24 @@ export class OperationsService {
   }
 
   async createTransferRequest(input: CreateTransferRequestInput) {
-    const amount = normalizeMoneyAmount(input.amount);
+    const amountKobo = assertPositiveKobo(input.amount);
     const account = await this.getActiveAccount(input.accountId);
 
     if (account.customerId !== input.customerId) {
       throw new ForbiddenException('Account does not belong to customer');
     }
 
-    this.ensureAvailableBalance(account, amount);
+    this.ensureAvailableBalance(account, amountKobo);
 
     const request = await this.prisma.$transaction(async (tx) => {
-      await this.holdFunds(tx, input.accountId, amount);
+      await this.holdFunds(tx, input.accountId, amountKobo);
 
       return tx.paymentRequest.create({
         data: {
           reference: generatePaymentRequestRef(),
           type: PaymentRequestType.TRANSFER,
           status: PaymentRequestStatus.PENDING,
-          amount: toMoneyDecimalString(amount),
+          amount: formatKoboAsDecimal(amountKobo),
           channel: PaymentChannel.MOBILE,
           accountId: input.accountId,
           customerId: input.customerId,
@@ -190,7 +205,7 @@ export class OperationsService {
     await this.notifyCustomer(
       input.customerId,
       'Transfer submitted',
-      `Your transfer of ₦${amount.toLocaleString()} to ${input.beneficiaryName} is pending approval.`,
+      `Your transfer of ₦${koboToMajorUnits(amountKobo).toLocaleString()} to ${input.beneficiaryName} is pending approval.`,
       'transfer_pending',
       'PaymentRequest',
       request.id,
@@ -198,7 +213,7 @@ export class OperationsService {
 
     await this.notifyManagers(
       'New transfer to approve',
-      `${request.account.customer.firstName} ${request.account.customer.lastName} requested a transfer of ₦${amount.toLocaleString()}.`,
+      `${request.account.customer.firstName} ${request.account.customer.lastName} requested a transfer of ₦${koboToMajorUnits(amountKobo).toLocaleString()}.`,
       'transfer_pending',
       request.id,
     );
@@ -207,7 +222,7 @@ export class OperationsService {
   }
 
   async createLoanRepaymentRequest(input: CreateLoanRepaymentRequestInput) {
-    const amount = normalizeMoneyAmount(input.amount);
+    const amountKobo = assertPositiveKobo(input.amount);
     const loan = await this.prisma.loan.findUnique({
       where: { id: input.loanId },
       include: { customer: true },
@@ -217,7 +232,7 @@ export class OperationsService {
     if (!([LoanStatus.DISBURSED, LoanStatus.ACTIVE, LoanStatus.OVERDUE] as LoanStatus[]).includes(loan.status)) {
       throw new BadRequestException('Loan is not active for repayment');
     }
-    if (amount > Number(loan.outstandingBalance)) {
+    if (compareKobo(amountKobo, parseMoneyToKobo(loan.outstandingBalance)) > 0) {
       throw new BadRequestException('Repayment amount exceeds outstanding balance');
     }
 
@@ -231,7 +246,7 @@ export class OperationsService {
         reference: generatePaymentRequestRef(),
         type: PaymentRequestType.LOAN_REPAYMENT,
         status: PaymentRequestStatus.PENDING,
-        amount: toMoneyDecimalString(amount),
+        amount: formatKoboAsDecimal(amountKobo),
         channel: PaymentChannel.CASH,
         accountId: input.accountId,
         customerId: input.customerId,
@@ -245,7 +260,7 @@ export class OperationsService {
     await this.notifyCustomer(
       input.customerId,
       'Loan repayment submitted',
-      `Your cash loan repayment of ₦${amount.toLocaleString()} is pending manager approval.`,
+      `Your cash loan repayment of ₦${koboToMajorUnits(amountKobo).toLocaleString()} is pending manager approval.`,
       'loan_repayment_pending',
       'PaymentRequest',
       request.id,
@@ -253,7 +268,7 @@ export class OperationsService {
 
     await this.notifyManagers(
       'Loan repayment to approve',
-      `${loan.customer.firstName} ${loan.customer.lastName} paid ₦${amount.toLocaleString()} toward loan ${loan.loanNumber}.`,
+      `${loan.customer.firstName} ${loan.customer.lastName} paid ₦${koboToMajorUnits(amountKobo).toLocaleString()} toward loan ${loan.loanNumber}.`,
       'loan_repayment_pending',
       request.id,
     );
@@ -343,7 +358,7 @@ export class OperationsService {
         request.type !== PaymentRequestType.DEPOSIT &&
         request.type !== PaymentRequestType.LOAN_REPAYMENT
       ) {
-        await this.releaseHold(tx, request.accountId, Number(request.amount));
+        await this.releaseHold(tx, request.accountId, parseMoneyToKobo(request.amount));
       }
 
       await tx.paymentRequestApproval.create({
@@ -365,7 +380,7 @@ export class OperationsService {
     await this.notifyCustomer(
       request.customerId!,
       'Request declined',
-      `Your ${request.type.toLowerCase()} request of ₦${Number(request.amount).toLocaleString()} was declined.${comment ? ` Reason: ${comment}` : ''}`,
+      `Your ${request.type.toLowerCase()} request of ₦${koboToMajorUnits(parseMoneyToKobo(request.amount)).toLocaleString()} was declined.${comment ? ` Reason: ${comment}` : ''}`,
       `${request.type.toLowerCase()}_rejected`,
       'PaymentRequest',
       request.id,
@@ -401,12 +416,12 @@ export class OperationsService {
     });
 
     return {
-      totalCustomerBalances: Number(balanceAgg._sum.balance || 0),
-      totalHeldBalances: Number(balanceAgg._sum.heldBalance || 0),
+      totalCustomerBalances: koboToMajorUnits(parseMoneyToKobo(balanceAgg._sum.balance || 0)),
+      totalHeldBalances: koboToMajorUnits(parseMoneyToKobo(balanceAgg._sum.heldBalance || 0)),
       pendingDepositCount: pendingDeposits._count.id,
-      pendingDepositAmount: Number(pendingDeposits._sum.amount || 0),
+      pendingDepositAmount: koboToMajorUnits(parseMoneyToKobo(pendingDeposits._sum.amount || 0)),
       pendingOutboundCount: pendingOutbound._count.id,
-      pendingOutboundAmount: Number(pendingOutbound._sum.amount || 0),
+      pendingOutboundAmount: koboToMajorUnits(parseMoneyToKobo(pendingOutbound._sum.amount || 0)),
       settlementAccounts,
       note: 'Compare total customer balances against actual funds in your Zenith, Opay, and Moniepoint accounts.',
     };
@@ -418,24 +433,23 @@ export class OperationsService {
     comment?: string,
     externalBankRef?: string,
   ) {
-    const amount = normalizeMoneyAmount(request.amount);
+    const amountKobo = parseMoneyToKobo(request.amount);
 
     return this.prisma.$transaction(async (tx) => {
       const account = await tx.account.findUnique({ where: { id: request.accountId } });
       if (!account) throw new NotFoundException('Account not found');
 
-      const balanceBefore = Number(account.balance);
-      const balanceAfter = balanceBefore + amount;
-      const held = Number(account.heldBalance);
+      const { balanceKobo, heldKobo } = readAccountKobo(account);
+      const ledger = applyBalanceDelta(balanceKobo, heldKobo, amountKobo);
 
       const transaction = await tx.transaction.create({
         data: {
           reference: generateTransactionRef(),
           type: TransactionType.DEPOSIT,
           status: TransactionStatus.COMPLETED,
-          amount: toMoneyDecimalString(amount),
-          balanceBefore,
-          balanceAfter,
+          amount: formatKoboAsDecimal(amountKobo),
+          balanceBefore: ledger.balanceBefore,
+          balanceAfter: ledger.balanceAfter,
           narration: request.narration || 'Approved deposit',
           accountId: request.accountId,
           processedById: actor.sub,
@@ -447,8 +461,8 @@ export class OperationsService {
       await tx.account.update({
         where: { id: request.accountId },
         data: {
-          balance: balanceAfter,
-          availableBalance: balanceAfter - held,
+          balance: ledger.balance,
+          availableBalance: ledger.availableBalance,
           status: account.status === AccountStatus.PENDING ? AccountStatus.ACTIVE : account.status,
         },
       });
@@ -476,7 +490,7 @@ export class OperationsService {
         tx,
         request.customerId!,
         'Deposit approved',
-        `₦${amount.toLocaleString()} has been credited to your account.`,
+        `₦${koboToMajorUnits(amountKobo).toLocaleString()} has been credited to your account.`,
         'deposit_approved',
         'PaymentRequest',
         request.id,
@@ -524,7 +538,7 @@ export class OperationsService {
       throw new BadRequestException('Loan repayment request is missing loan reference');
     }
 
-    const amount = normalizeMoneyAmount(request.amount);
+    const amountKobo = parseMoneyToKobo(request.amount);
 
     return this.prisma.$transaction(async (tx) => {
       const loan = await tx.loan.findUnique({
@@ -538,19 +552,18 @@ export class OperationsService {
       const account = await tx.account.findUnique({ where: { id: request.accountId } });
       if (!account) throw new NotFoundException('Account not found');
 
-      const balanceBefore = Number(account.balance);
-      const balanceAfter = balanceBefore;
+      const { balanceKobo } = readAccountKobo(account);
 
-      await this.applyLoanPayment(tx, loan.id, amount);
+      await this.applyLoanPayment(tx, loan.id, amountKobo);
 
       const transaction = await tx.transaction.create({
         data: {
           reference: generateTransactionRef(),
           type: TransactionType.LOAN_REPAYMENT,
           status: TransactionStatus.COMPLETED,
-          amount: toMoneyDecimalString(amount),
-          balanceBefore,
-          balanceAfter,
+          amount: formatKoboAsDecimal(amountKobo),
+          balanceBefore: formatKoboAsDecimal(balanceKobo),
+          balanceAfter: formatKoboAsDecimal(balanceKobo),
           narration: request.narration || `Loan repayment - ${loan.loanNumber}`,
           accountId: request.accountId,
           processedById: actor.sub,
@@ -578,7 +591,7 @@ export class OperationsService {
         tx,
         request.customerId!,
         'Loan repayment recorded',
-        `₦${amount.toLocaleString()} has been applied to loan ${loan.loanNumber}.`,
+        `₦${koboToMajorUnits(amountKobo).toLocaleString()} has been applied to loan ${loan.loanNumber}.`,
         'loan_repayment_approved',
         'PaymentRequest',
         request.id,
@@ -591,7 +604,7 @@ export class OperationsService {
   private async applyLoanPayment(
     tx: Parameters<Parameters<PrismaService['$transaction']>[0]>[0],
     loanId: string,
-    amount: number,
+    amountKobo: number,
   ) {
     const loan = await tx.loan.findUnique({
       where: { id: loanId },
@@ -601,32 +614,36 @@ export class OperationsService {
     });
     if (!loan) throw new NotFoundException('Loan not found');
 
-    let remaining = amount;
+    let remainingKobo = amountKobo;
     for (const schedule of loan.schedules) {
-      if (remaining <= 0) break;
-      const due = Number(schedule.totalDue) - Number(schedule.paidAmount);
-      const pay = Math.min(remaining, due);
-      const newPaid = Number(schedule.paidAmount) + pay;
-      const isPaid = newPaid >= Number(schedule.totalDue);
+      if (remainingKobo <= 0) break;
+      const dueKobo = subtractKobo(
+        parseMoneyToKobo(schedule.totalDue),
+        parseMoneyToKobo(schedule.paidAmount),
+      );
+      const payKobo = minKobo(remainingKobo, dueKobo);
+      const newPaidKobo = addKobo(parseMoneyToKobo(schedule.paidAmount), payKobo);
+      const isPaid = compareKobo(newPaidKobo, parseMoneyToKobo(schedule.totalDue)) >= 0;
 
       await tx.loanSchedule.update({
         where: { id: schedule.id },
         data: {
-          paidAmount: newPaid,
+          paidAmount: formatKoboAsDecimal(newPaidKobo),
           isPaid,
           paidAt: isPaid ? new Date() : schedule.paidAt,
         },
       });
-      remaining -= pay;
+      remainingKobo = subtractKobo(remainingKobo, payKobo);
     }
 
-    const newOutstanding = Math.max(0, Number(loan.outstandingBalance) - amount);
-    const closed = newOutstanding <= 0;
+    const outstandingKobo = parseMoneyToKobo(loan.outstandingBalance);
+    const newOutstandingKobo = maxKobo(0, subtractKobo(outstandingKobo, amountKobo));
+    const closed = newOutstandingKobo <= 0;
 
     await tx.loan.update({
       where: { id: loanId },
       data: {
-        outstandingBalance: newOutstanding,
+        outstandingBalance: formatKoboAsDecimal(newOutstandingKobo),
         status: closed
           ? LoanStatus.CLOSED
           : loan.status === LoanStatus.DISBURSED
@@ -657,30 +674,29 @@ export class OperationsService {
     comment?: string,
     externalBankRef?: string,
   ) {
-    const amount = normalizeMoneyAmount(request.amount);
+    const amountKobo = parseMoneyToKobo(request.amount);
 
     return this.prisma.$transaction(async (tx) => {
       const account = await tx.account.findUnique({ where: { id: request.accountId } });
       if (!account) throw new NotFoundException('Account not found');
 
-      const balanceBefore = Number(account.balance);
-      const held = Number(account.heldBalance);
+      const { balanceKobo, heldKobo } = readAccountKobo(account);
 
-      if (balanceBefore < amount) {
+      if (compareKobo(balanceKobo, amountKobo) < 0) {
         throw new BadRequestException('Insufficient balance');
       }
 
-      const balanceAfter = balanceBefore - amount;
-      const heldAfter = Math.max(0, held - amount);
+      const balanceAfterKobo = subtractKobo(balanceKobo, amountKobo);
+      const heldAfterKobo = maxKobo(0, subtractKobo(heldKobo, amountKobo));
 
       const transaction = await tx.transaction.create({
         data: {
           reference: generateTransactionRef(),
           type,
           status: TransactionStatus.COMPLETED,
-          amount: toMoneyDecimalString(amount),
-          balanceBefore,
-          balanceAfter,
+          amount: formatKoboAsDecimal(amountKobo),
+          balanceBefore: formatKoboAsDecimal(balanceKobo),
+          balanceAfter: formatKoboAsDecimal(balanceAfterKobo),
           narration: request.narration || `Approved ${type.toLowerCase()}`,
           accountId: request.accountId,
           processedById: actor.sub,
@@ -700,9 +716,9 @@ export class OperationsService {
       await tx.account.update({
         where: { id: request.accountId },
         data: {
-          balance: balanceAfter,
-          heldBalance: heldAfter,
-          availableBalance: balanceAfter - heldAfter,
+          balance: formatKoboAsDecimal(balanceAfterKobo),
+          heldBalance: formatKoboAsDecimal(heldAfterKobo),
+          availableBalance: formatKoboAsDecimal(subtractKobo(balanceAfterKobo, heldAfterKobo)),
         },
       });
 
@@ -728,8 +744,8 @@ export class OperationsService {
       const title = type === TransactionType.TRANSFER ? 'Transfer completed' : 'Withdrawal completed';
       const body =
         type === TransactionType.TRANSFER
-          ? `₦${amount.toLocaleString()} has been sent to ${request.beneficiaryName}.`
-          : `₦${amount.toLocaleString()} withdrawal has been processed.`;
+          ? `₦${koboToMajorUnits(amountKobo).toLocaleString()} has been sent to ${request.beneficiaryName}.`
+          : `₦${koboToMajorUnits(amountKobo).toLocaleString()} withdrawal has been processed.`;
 
       await this.notifyCustomerTx(
         tx,
@@ -761,10 +777,11 @@ export class OperationsService {
 
   private ensureAvailableBalance(
     account: { balance: unknown; heldBalance: unknown },
-    amount: number,
+    amountKobo: number,
   ) {
-    const available = Number(account.balance) - Number(account.heldBalance);
-    if (available < amount) {
+    const { balanceKobo, heldKobo } = readAccountKobo(account);
+    const availableKobo = subtractKobo(balanceKobo, heldKobo);
+    if (compareKobo(availableKobo, amountKobo) < 0) {
       throw new BadRequestException('Insufficient available balance');
     }
   }
@@ -772,22 +789,23 @@ export class OperationsService {
   private async holdFunds(
     tx: Parameters<Parameters<PrismaService['$transaction']>[0]>[0],
     accountId: string,
-    amount: number,
+    amountKobo: number,
   ) {
     const account = await tx.account.findUnique({ where: { id: accountId } });
     if (!account) throw new NotFoundException('Account not found');
 
-    const available = Number(account.balance) - Number(account.heldBalance);
-    if (available < amount) {
+    const { balanceKobo, heldKobo } = readAccountKobo(account);
+    const availableKobo = subtractKobo(balanceKobo, heldKobo);
+    if (compareKobo(availableKobo, amountKobo) < 0) {
       throw new BadRequestException('Insufficient available balance');
     }
 
-    const heldAfter = Number(account.heldBalance) + amount;
+    const hold = applyHoldDelta(balanceKobo, heldKobo, amountKobo);
     await tx.account.update({
       where: { id: accountId },
       data: {
-        heldBalance: heldAfter,
-        availableBalance: Number(account.balance) - heldAfter,
+        heldBalance: hold.heldBalance,
+        availableBalance: hold.availableBalance,
       },
     });
   }
@@ -795,17 +813,18 @@ export class OperationsService {
   private async releaseHold(
     tx: Parameters<Parameters<PrismaService['$transaction']>[0]>[0],
     accountId: string,
-    amount: number,
+    amountKobo: number,
   ) {
     const account = await tx.account.findUnique({ where: { id: accountId } });
     if (!account) throw new NotFoundException('Account not found');
 
-    const heldAfter = Math.max(0, Number(account.heldBalance) - amount);
+    const { balanceKobo, heldKobo } = readAccountKobo(account);
+    const heldAfterKobo = maxKobo(0, subtractKobo(heldKobo, amountKobo));
     await tx.account.update({
       where: { id: accountId },
       data: {
-        heldBalance: heldAfter,
-        availableBalance: Number(account.balance) - heldAfter,
+        heldBalance: formatKoboAsDecimal(heldAfterKobo),
+        availableBalance: formatKoboAsDecimal(subtractKobo(balanceKobo, heldAfterKobo)),
       },
     });
   }

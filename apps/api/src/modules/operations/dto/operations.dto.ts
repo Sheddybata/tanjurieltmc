@@ -2,7 +2,7 @@ import { IsString, IsOptional, IsEnum, IsNumber, Min } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { PaymentRequestType, SettlementProvider } from '@tanjuriel/database';
 import { IsEntityId } from '../../../common/validators/entity-id.decorator';
-import { TransformMoney } from '../../../common/validators/money.decorator';
+import { IsMoneyAmount, TransformMoney } from '../../../common/validators/money.decorator';
 
 export class ApproveRequestDto {
   @ApiPropertyOptional()
@@ -44,6 +44,7 @@ export class CustomerDepositRequestDto {
   accountId: string;
 
   @ApiProperty()
+  @IsMoneyAmount()
   @TransformMoney()
   @IsNumber()
   @Min(1)
@@ -65,6 +66,7 @@ export class CustomerTransferRequestDto {
   accountId: string;
 
   @ApiProperty()
+  @IsMoneyAmount()
   @TransformMoney()
   @IsNumber()
   @Min(1)
@@ -98,6 +100,7 @@ export class CustomerWithdrawalRequestDto {
   accountId: string;
 
   @ApiProperty()
+  @IsMoneyAmount()
   @TransformMoney()
   @IsNumber()
   @Min(1)

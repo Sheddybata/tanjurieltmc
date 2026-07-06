@@ -30,6 +30,23 @@ export function parseMoneyAmount(value: number | string | null | undefined): num
   return (negative ? -1 : 1) * cents / 100;
 }
 
+/** Send exact decimal strings to the API — never JSON float literals for money. */
+export function formatMoneyForApi(value: string | number | null | undefined): string {
+  if (value == null || value === '') return '0.00';
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value)) return '0.00';
+    return formatMoneyForApi(value.toFixed(2));
+  }
+  const cleaned = String(value).replace(/,/g, '').trim();
+  if (!cleaned || cleaned === '-') return '0.00';
+  const negative = cleaned.startsWith('-');
+  const abs = negative ? cleaned.slice(1) : cleaned;
+  const [wholePart, fracPart = ''] = abs.split('.');
+  if (!/^\d+$/.test(wholePart) || (fracPart && !/^\d+$/.test(fracPart))) return '0.00';
+  const frac = fracPart.padEnd(2, '0').slice(0, 2);
+  return `${negative ? '-' : ''}${wholePart}.${frac}`;
+}
+
 export function formatDate(date: string | Date): string {
   return new Intl.DateTimeFormat('en-NG', {
     dateStyle: 'medium',

@@ -9,7 +9,7 @@ import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { api } from '@/lib/api';
 import { useToast } from '@/components/ui/toast-provider';
-import { formatCurrency, parseMoneyAmount } from '@/lib/utils';
+import { formatCurrency, formatMoneyForApi } from '@/lib/utils';
 
 interface CustomerLoan {
   id: string;
@@ -80,7 +80,7 @@ export default function LoanRepaymentsPage() {
         '/teller/loans/repay',
         {
           loanId,
-          amount: parseMoneyAmount(String(form.get('amount') ?? '')),
+          amount: formatMoneyForApi(String(form.get('amount') ?? '')),
           narration: form.get('narration') || undefined,
         },
       );

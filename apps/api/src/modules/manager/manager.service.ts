@@ -13,6 +13,14 @@ import {
   paginate,
   paginationMeta,
 } from '../../common/utils/reference.util';
+import {
+  applyBalanceDelta,
+  readAccountKobo,
+} from '../../common/utils/money-ledger.util';
+import {
+  formatKoboAsDecimal,
+  parseMoneyToKobo,
+} from '../../common/utils/money.util';
 import { CreateLoanDto, LoanActionDto } from './dto/manager.dto';
 
 @Injectable()
@@ -217,13 +225,16 @@ export class ManagerService {
       });
 
       if (savingsAccount) {
-        const balanceBefore = Number(savingsAccount.balance);
-        const amount = Number(loan.principalAmount);
-        const balanceAfter = balanceBefore + amount;
+        const amountKobo = parseMoneyToKobo(loan.principalAmount);
+        const { balanceKobo, heldKobo } = readAccountKobo(savingsAccount);
+        const ledger = applyBalanceDelta(balanceKobo, heldKobo, amountKobo);
 
         await tx.account.update({
           where: { id: savingsAccount.id },
-          data: { balance: balanceAfter, availableBalance: balanceAfter },
+          data: {
+            balance: ledger.balance,
+            availableBalance: ledger.availableBalance,
+          },
         });
 
         await tx.transaction.create({
@@ -231,9 +242,9 @@ export class ManagerService {
             reference: generateTransactionRef(),
             type: TransactionType.LOAN_DISBURSEMENT,
             status: TransactionStatus.COMPLETED,
-            amount,
-            balanceBefore,
-            balanceAfter,
+            amount: formatKoboAsDecimal(amountKobo),
+            balanceBefore: ledger.balanceBefore,
+            balanceAfter: ledger.balanceAfter,
             narration: `Loan disbursement - ${loan.loanNumber}`,
             accountId: savingsAccount.id,
             processedById: user.sub,

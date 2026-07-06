@@ -11,6 +11,7 @@ import {
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Gender, AccountType } from '@tanjuriel/database';
 import { IsEntityId } from '../../../common/validators/entity-id.decorator';
+import { TransformMoney } from '../../../common/validators/money.decorator';
 
 export class RegisterCustomerDto {
   @ApiProperty()
@@ -93,6 +94,7 @@ export class OpenAccountDto {
 
   @ApiPropertyOptional()
   @IsOptional()
+  @TransformMoney()
   @IsNumber()
   initialDeposit?: number;
 
@@ -125,6 +127,7 @@ export class LoanRepaymentDto {
   loanId: string;
 
   @ApiProperty()
+  @TransformMoney()
   @IsNumber()
   @Min(0.01)
   amount: number;
@@ -141,6 +144,7 @@ export class TransactionDto {
   accountId: string;
 
   @ApiProperty()
+  @TransformMoney()
   @IsNumber()
   @Min(0.01)
   amount: number;

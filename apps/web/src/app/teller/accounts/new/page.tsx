@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { api } from '@/lib/api';
+import { parseMoneyAmount } from '@/lib/utils';
 import { TELLER_OPEN_ACCOUNT_TYPES } from '@/lib/account-types';
 
 interface CustomerOption {
@@ -62,7 +63,9 @@ function OpenAccountForm() {
       const res = await api.post<{ success: boolean; data: { accountNumber: string } }>('/teller/accounts', {
         customerId,
         type: accountType,
-        initialDeposit: form.get('initialDeposit') ? Number(form.get('initialDeposit')) : undefined,
+        initialDeposit: form.get('initialDeposit')
+          ? parseMoneyAmount(String(form.get('initialDeposit')))
+          : undefined,
         appPin: form.get('appPin') || undefined,
         label: form.get('label') || undefined,
         maturityDate: form.get('maturityDate') || undefined,

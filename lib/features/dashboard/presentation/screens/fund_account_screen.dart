@@ -61,9 +61,10 @@ class _FundAccountScreenState extends ConsumerState<FundAccountScreen> {
     final user = ref.read(authProvider).user;
     final selected = ref.read(selectedAccountProvider);
     if (!KycGuard.requireVerified(context, user)) return;
-    final amount = double.tryParse(_amountController.text);
+    final amountText = _amountController.text.trim();
+    final amount = double.tryParse(amountText);
     final accountId = selected?.id ?? user?.accountId;
-    if (accountId == null || amount == null || amount <= 0 || _selectedProvider == null) {
+    if (accountId == null || amountText.isEmpty || amount == null || amount <= 0 || _selectedProvider == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Enter a valid amount and select a bank')),
       );
@@ -75,7 +76,7 @@ class _FundAccountScreenState extends ConsumerState<FundAccountScreen> {
       final api = ref.read(apiClientProvider);
       await api.post('/customer/deposit-requests', data: {
         'accountId': accountId,
-        'amount': amount,
+        'amount': _amountController.text.trim(),
         'settlementProvider': _selectedProvider,
         if (_noteController.text.trim().isNotEmpty) 'customerNote': _noteController.text.trim(),
       });

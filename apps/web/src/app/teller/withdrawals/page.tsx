@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { AccountSearchSelect } from '@/components/ui/account-search-select';
 import { api } from '@/lib/api';
+import { parseMoneyAmount } from '@/lib/utils';
 import { useToast } from '@/components/ui/toast-provider';
 
 export default function WithdrawalsPage() {
@@ -29,7 +30,7 @@ export default function WithdrawalsPage() {
         '/teller/withdrawals',
         {
           accountId,
-          amount: Number(form.get('amount')),
+          amount: parseMoneyAmount(String(form.get('amount') ?? '')),
           narration: form.get('narration') || undefined,
         },
       );

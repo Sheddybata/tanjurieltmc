@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { AccountSearchSelect } from '@/components/ui/account-search-select';
 import { api } from '@/lib/api';
+import { parseMoneyAmount } from '@/lib/utils';
 import { useToast } from '@/components/ui/toast-provider';
 
 export default function DepositsPage() {
@@ -29,7 +30,7 @@ export default function DepositsPage() {
         '/teller/deposits',
         {
           accountId,
-          amount: Number(form.get('amount')),
+          amount: parseMoneyAmount(String(form.get('amount') ?? '')),
           narration: form.get('narration') || undefined,
         },
       );
@@ -50,7 +51,7 @@ export default function DepositsPage() {
         <Card className="max-w-lg">
           <form onSubmit={handleSubmit} className="space-y-5">
             <AccountSearchSelect value={accountId} onChange={(id) => setAccountId(id)} />
-            <Input name="amount" label="Amount (NGN)" type="number" min="0.01" step="0.01" required />
+            <Input name="amount" label="Amount (NGN)" type="number" min="1" step="1" required />
             <Input name="narration" label="Narration" placeholder="Cash deposit" />
             <Button type="submit" loading={loading}>Submit for Approval</Button>
           </form>

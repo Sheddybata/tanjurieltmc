@@ -24,6 +24,7 @@ import {
   paginate,
   paginationMeta,
 } from '../../common/utils/reference.util';
+import { normalizeMoneyAmount, toMoneyDecimalString } from '../../common/utils/money.util';
 
 export interface CreateDepositRequestInput {
   accountId: string;
@@ -70,6 +71,7 @@ export class OperationsService {
 
   async createDepositRequest(input: CreateDepositRequestInput) {
     const account = await this.getActiveAccount(input.accountId);
+    const amount = normalizeMoneyAmount(input.amount);
 
     if (input.channel === PaymentChannel.BANK_TRANSFER && !input.settlementProvider) {
       throw new BadRequestException('Settlement provider is required for bank transfer deposits');
@@ -80,7 +82,7 @@ export class OperationsService {
         reference: generatePaymentRequestRef(),
         type: PaymentRequestType.DEPOSIT,
         status: PaymentRequestStatus.PENDING,
-        amount: input.amount,
+        amount: toMoneyDecimalString(amount),
         channel: input.channel,
         accountId: input.accountId,
         customerId: input.customerId ?? account.customerId,
@@ -95,7 +97,7 @@ export class OperationsService {
     await this.notifyCustomer(
       request.customerId!,
       'Deposit submitted',
-      `Your deposit request of ₦${input.amount.toLocaleString()} is pending manager approval.`,
+      `Your deposit request of ₦${amount.toLocaleString()} is pending manager approval.`,
       'deposit_pending',
       'PaymentRequest',
       request.id,
@@ -103,7 +105,7 @@ export class OperationsService {
 
     await this.notifyManagers(
       'New deposit to approve',
-      `${request.account.customer.firstName} ${request.account.customer.lastName} submitted a deposit of ₦${input.amount.toLocaleString()}.`,
+      `${request.account.customer.firstName} ${request.account.customer.lastName} submitted a deposit of ₦${amount.toLocaleString()}.`,
       'deposit_pending',
       request.id,
     );
@@ -112,18 +114,19 @@ export class OperationsService {
   }
 
   async createWithdrawalRequest(input: CreateWithdrawalRequestInput) {
+    const amount = normalizeMoneyAmount(input.amount);
     const account = await this.getActiveAccount(input.accountId);
-    this.ensureAvailableBalance(account, input.amount);
+    this.ensureAvailableBalance(account, amount);
 
     const request = await this.prisma.$transaction(async (tx) => {
-      await this.holdFunds(tx, input.accountId, input.amount);
+      await this.holdFunds(tx, input.accountId, amount);
 
       return tx.paymentRequest.create({
         data: {
           reference: generatePaymentRequestRef(),
           type: PaymentRequestType.WITHDRAWAL,
           status: PaymentRequestStatus.PENDING,
-          amount: input.amount,
+          amount: toMoneyDecimalString(amount),
           channel: input.channel,
           accountId: input.accountId,
           customerId: input.customerId ?? account.customerId,
@@ -137,7 +140,7 @@ export class OperationsService {
     await this.notifyCustomer(
       request.customerId!,
       'Withdrawal submitted',
-      `Your withdrawal request of ₦${input.amount.toLocaleString()} is pending manager approval.`,
+      `Your withdrawal request of ₦${amount.toLocaleString()} is pending manager approval.`,
       'withdrawal_pending',
       'PaymentRequest',
       request.id,
@@ -145,7 +148,7 @@ export class OperationsService {
 
     await this.notifyManagers(
       'New withdrawal to approve',
-      `${request.account.customer.firstName} ${request.account.customer.lastName} requested a withdrawal of ₦${input.amount.toLocaleString()}.`,
+      `${request.account.customer.firstName} ${request.account.customer.lastName} requested a withdrawal of ₦${amount.toLocaleString()}.`,
       'withdrawal_pending',
       request.id,
     );
@@ -154,23 +157,24 @@ export class OperationsService {
   }
 
   async createTransferRequest(input: CreateTransferRequestInput) {
+    const amount = normalizeMoneyAmount(input.amount);
     const account = await this.getActiveAccount(input.accountId);
 
     if (account.customerId !== input.customerId) {
       throw new ForbiddenException('Account does not belong to customer');
     }
 
-    this.ensureAvailableBalance(account, input.amount);
+    this.ensureAvailableBalance(account, amount);
 
     const request = await this.prisma.$transaction(async (tx) => {
-      await this.holdFunds(tx, input.accountId, input.amount);
+      await this.holdFunds(tx, input.accountId, amount);
 
       return tx.paymentRequest.create({
         data: {
           reference: generatePaymentRequestRef(),
           type: PaymentRequestType.TRANSFER,
           status: PaymentRequestStatus.PENDING,
-          amount: input.amount,
+          amount: toMoneyDecimalString(amount),
           channel: PaymentChannel.MOBILE,
           accountId: input.accountId,
           customerId: input.customerId,
@@ -186,7 +190,7 @@ export class OperationsService {
     await this.notifyCustomer(
       input.customerId,
       'Transfer submitted',
-      `Your transfer of ₦${input.amount.toLocaleString()} to ${input.beneficiaryName} is pending approval.`,
+      `Your transfer of ₦${amount.toLocaleString()} to ${input.beneficiaryName} is pending approval.`,
       'transfer_pending',
       'PaymentRequest',
       request.id,
@@ -194,7 +198,7 @@ export class OperationsService {
 
     await this.notifyManagers(
       'New transfer to approve',
-      `${request.account.customer.firstName} ${request.account.customer.lastName} requested a transfer of ₦${input.amount.toLocaleString()}.`,
+      `${request.account.customer.firstName} ${request.account.customer.lastName} requested a transfer of ₦${amount.toLocaleString()}.`,
       'transfer_pending',
       request.id,
     );
@@ -203,6 +207,7 @@ export class OperationsService {
   }
 
   async createLoanRepaymentRequest(input: CreateLoanRepaymentRequestInput) {
+    const amount = normalizeMoneyAmount(input.amount);
     const loan = await this.prisma.loan.findUnique({
       where: { id: input.loanId },
       include: { customer: true },
@@ -212,7 +217,7 @@ export class OperationsService {
     if (!([LoanStatus.DISBURSED, LoanStatus.ACTIVE, LoanStatus.OVERDUE] as LoanStatus[]).includes(loan.status)) {
       throw new BadRequestException('Loan is not active for repayment');
     }
-    if (input.amount > Number(loan.outstandingBalance)) {
+    if (amount > Number(loan.outstandingBalance)) {
       throw new BadRequestException('Repayment amount exceeds outstanding balance');
     }
 
@@ -226,7 +231,7 @@ export class OperationsService {
         reference: generatePaymentRequestRef(),
         type: PaymentRequestType.LOAN_REPAYMENT,
         status: PaymentRequestStatus.PENDING,
-        amount: input.amount,
+        amount: toMoneyDecimalString(amount),
         channel: PaymentChannel.CASH,
         accountId: input.accountId,
         customerId: input.customerId,
@@ -240,7 +245,7 @@ export class OperationsService {
     await this.notifyCustomer(
       input.customerId,
       'Loan repayment submitted',
-      `Your cash loan repayment of ₦${input.amount.toLocaleString()} is pending manager approval.`,
+      `Your cash loan repayment of ₦${amount.toLocaleString()} is pending manager approval.`,
       'loan_repayment_pending',
       'PaymentRequest',
       request.id,
@@ -248,7 +253,7 @@ export class OperationsService {
 
     await this.notifyManagers(
       'Loan repayment to approve',
-      `${loan.customer.firstName} ${loan.customer.lastName} paid ₦${input.amount.toLocaleString()} toward loan ${loan.loanNumber}.`,
+      `${loan.customer.firstName} ${loan.customer.lastName} paid ₦${amount.toLocaleString()} toward loan ${loan.loanNumber}.`,
       'loan_repayment_pending',
       request.id,
     );
@@ -413,7 +418,7 @@ export class OperationsService {
     comment?: string,
     externalBankRef?: string,
   ) {
-    const amount = Number(request.amount);
+    const amount = normalizeMoneyAmount(request.amount);
 
     return this.prisma.$transaction(async (tx) => {
       const account = await tx.account.findUnique({ where: { id: request.accountId } });
@@ -428,7 +433,7 @@ export class OperationsService {
           reference: generateTransactionRef(),
           type: TransactionType.DEPOSIT,
           status: TransactionStatus.COMPLETED,
-          amount,
+          amount: toMoneyDecimalString(amount),
           balanceBefore,
           balanceAfter,
           narration: request.narration || 'Approved deposit',
@@ -519,7 +524,7 @@ export class OperationsService {
       throw new BadRequestException('Loan repayment request is missing loan reference');
     }
 
-    const amount = Number(request.amount);
+    const amount = normalizeMoneyAmount(request.amount);
 
     return this.prisma.$transaction(async (tx) => {
       const loan = await tx.loan.findUnique({
@@ -543,7 +548,7 @@ export class OperationsService {
           reference: generateTransactionRef(),
           type: TransactionType.LOAN_REPAYMENT,
           status: TransactionStatus.COMPLETED,
-          amount,
+          amount: toMoneyDecimalString(amount),
           balanceBefore,
           balanceAfter,
           narration: request.narration || `Loan repayment - ${loan.loanNumber}`,
@@ -652,7 +657,7 @@ export class OperationsService {
     comment?: string,
     externalBankRef?: string,
   ) {
-    const amount = Number(request.amount);
+    const amount = normalizeMoneyAmount(request.amount);
 
     return this.prisma.$transaction(async (tx) => {
       const account = await tx.account.findUnique({ where: { id: request.accountId } });
@@ -673,7 +678,7 @@ export class OperationsService {
           reference: generateTransactionRef(),
           type,
           status: TransactionStatus.COMPLETED,
-          amount,
+          amount: toMoneyDecimalString(amount),
           balanceBefore,
           balanceAfter,
           narration: request.narration || `Approved ${type.toLowerCase()}`,

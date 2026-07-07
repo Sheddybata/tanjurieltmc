@@ -4,7 +4,6 @@ import { ApiTags, ApiBearerAuth, ApiOperation, ApiConsumes } from '@nestjs/swagg
 import { LoanStatus } from '@tanjuriel/database';
 import { Permission, JwtPayload } from '@tanjuriel/shared';
 import { ManagerService } from './manager.service';
-import { LoanOverdueService } from '../loans/loan-overdue.service';
 import { LoanActionDto, ManagerApplyLoanDto, ManagerLoanQuoteDto } from './dto/manager.dto';
 import { JwtAuthGuard, PermissionsGuard } from '../../common/guards/auth.guards';
 import { Permissions, User } from '../../common/decorators/auth.decorators';
@@ -19,10 +18,7 @@ import {
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @ApiBearerAuth()
 export class ManagerController {
-  constructor(
-    private managerService: ManagerService,
-    private loanOverdueService: LoanOverdueService,
-  ) {}
+  constructor(private managerService: ManagerService) {}
 
   @Get('loan-products')
   @Permissions(Permission.VIEW_LOANS)
@@ -89,7 +85,6 @@ export class ManagerController {
     @Query('page') page?: number,
     @Query('limit') limit?: number,
   ) {
-    await this.loanOverdueService.syncOverdueLoans();
     const result = await this.managerService.getLoans(status, Number(page) || 1, Number(limit) || 20);
     return { success: true, ...result };
   }

@@ -15,7 +15,9 @@ import { CustomerAuthModule } from './modules/customer-auth/customer-auth.module
 import { CustomerPortalModule } from './modules/customer/customer-portal.module';
 import { SettingsModule } from './modules/settings/settings.module';
 import { HealthModule } from './modules/health/health.module';
+import { SchedulerModule } from './modules/scheduler/scheduler.module';
 import { PrismaModule } from './common/prisma/prisma.module';
+import { CacheModule } from './common/cache/cache.module';
 import { AuditInterceptor } from './common/interceptors/audit.interceptor';
 
 @Module({
@@ -25,7 +27,9 @@ import { AuditInterceptor } from './common/interceptors/audit.interceptor';
       envFilePath: [join(__dirname, '../../../.env'), join(__dirname, '../../../.env.local')],
     }),
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 100 }]),
+    ScheduleModule.forRoot(),
     PrismaModule,
+    CacheModule,
     AuthModule,
     UsersModule,
     TellerModule,
@@ -37,6 +41,7 @@ import { AuditInterceptor } from './common/interceptors/audit.interceptor';
     CustomerPortalModule,
     SettingsModule,
     HealthModule,
+    SchedulerModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

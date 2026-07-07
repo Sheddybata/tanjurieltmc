@@ -10,6 +10,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { api } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
+import { primaryMemberAccountNumber } from '@/lib/member-id';
 
 interface Customer {
   id: string;
@@ -70,7 +71,7 @@ function CustomersPageContent() {
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search by name, phone, BVN..."
+              placeholder="Search by name, phone, account number, BVN..."
               className="input-field pl-10"
             />
           </form>
@@ -84,7 +85,7 @@ function CustomersPageContent() {
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-gray-100 text-xs font-semibold uppercase tracking-wide text-gray-500">
-                  <th className="pb-3 pr-4">Customer #</th>
+                  <th className="pb-3 pr-4">Member ID</th>
                   <th className="pb-3 pr-4">Name</th>
                   <th className="pb-3 pr-4">Phone</th>
                   <th className="pb-3 pr-4">KYC</th>
@@ -100,7 +101,9 @@ function CustomersPageContent() {
                 ) : (
                   customers.map((c) => (
                     <tr key={c.id} className="border-b border-gray-50 hover:bg-gray-50/50">
-                      <td className="py-3 pr-4 font-mono text-xs text-brand-600">{c.customerNumber}</td>
+                      <td className="py-3 pr-4 font-mono text-xs text-brand-600">
+                        {primaryMemberAccountNumber(c.accounts, c.phone)}
+                      </td>
                       <td className="py-3 pr-4 font-medium">
                         <Link href={`/teller/customers/${c.id}`} className="hover:text-brand-600 hover:underline">
                           {c.firstName} {c.lastName}

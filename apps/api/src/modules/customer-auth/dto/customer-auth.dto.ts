@@ -1,23 +1,10 @@
-import {
-  IsString,
-  IsNotEmpty,
-  Length,
-  Matches,
-  IsEmail,
-  IsOptional,
-  IsDateString,
-  IsEnum,
-  IsNumber,
-  Min,
-} from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Gender } from '@tanjuriel/database';
-import { Transform } from 'class-transformer';
+import { ApiProperty, IntersectionType, OmitType } from '@nestjs/swagger';
+import { IsString, Length, Matches } from 'class-validator';
+import { CustomerProfileDto } from '../../../common/dto/customer-profile.dto';
 
 export class CustomerLoginDto {
   @ApiProperty({ example: '08012345678' })
   @IsString()
-  @IsNotEmpty()
   phone: string;
 
   @ApiProperty({ example: '1234' })
@@ -27,40 +14,18 @@ export class CustomerLoginDto {
   pin: string;
 }
 
-export class CustomerRegisterDto {
+export class CustomerRegisterPinDto {
   @ApiProperty()
   @IsString()
-  @IsNotEmpty()
-  firstName: string;
+  @Length(4, 6)
+  @Matches(/^\d+$/)
+  pin: string;
+}
 
-  @ApiProperty()
-  @IsString()
-  @IsNotEmpty()
-  lastName: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
-  middleName?: string;
-
-  @ApiProperty()
-  @IsDateString()
-  dateOfBirth: string;
-
-  @ApiProperty({ enum: Gender })
-  @IsEnum(Gender)
-  gender: Gender;
-
-  @ApiProperty()
-  @IsString()
-  @IsNotEmpty()
-  phone: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsEmail()
-  email?: string;
-
+export class CustomerRegisterDto extends IntersectionType(
+  OmitType(CustomerProfileDto, ['bvn', 'nin'] as const),
+  CustomerRegisterPinDto,
+) {
   @ApiProperty()
   @IsString()
   @Length(11, 11)
@@ -72,44 +37,6 @@ export class CustomerRegisterDto {
   @Length(11, 11)
   @Matches(/^\d+$/)
   nin: string;
-
-  @ApiProperty()
-  @IsString()
-  @IsNotEmpty()
-  address: string;
-
-  @ApiProperty()
-  @IsString()
-  @IsNotEmpty()
-  city: string;
-
-  @ApiProperty()
-  @IsString()
-  @IsNotEmpty()
-  state: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
-  occupation?: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
-  employer?: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @Transform(({ value }) => (value === '' || value == null ? undefined : Number(value)))
-  @IsNumber()
-  @Min(0)
-  monthlyIncome?: number;
-
-  @ApiProperty()
-  @IsString()
-  @Length(4, 6)
-  @Matches(/^\d+$/)
-  pin: string;
 }
 
 export class CustomerChangePinDto {

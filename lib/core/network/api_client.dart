@@ -75,6 +75,17 @@ class ApiClient {
     }
     return _dio.patch<T>(path, data: data);
   }
+
+  Future<List<int>> getBytes(String path) async {
+    if (AppConfig.useMockApi) {
+      return MockApiHandler.getBytes(path);
+    }
+    final res = await _dio.get<List<int>>(
+      path,
+      options: Options(responseType: ResponseType.bytes),
+    );
+    return res.data ?? [];
+  }
 }
 
 class ErrorInterceptor extends Interceptor {

@@ -6,11 +6,13 @@ import {
 
   BadRequestException,
 
+  ConflictException,
+
   ForbiddenException,
 
 } from '@nestjs/common';
 
-import { AccountStatus, AccountType, CustomerKycStatus, LoanStatus, PaymentChannel } from '@tanjuriel/database';
+import { AccountStatus, AccountType, CustomerKycStatus, LoanStatus, PaymentChannel, RegistrationSource } from '@tanjuriel/database';
 
 import { JwtPayload, Permission } from '@tanjuriel/shared';
 
@@ -34,6 +36,14 @@ import { RegisterCustomerDto, OpenAccountDto, TransactionDto, EnableMobileAccess
 
 import { OperationsService } from '../operations/operations.service';
 import { customerAccountSelect } from '../../common/utils/account-select.util';
+import {
+  assertChildSavingsOpenInput,
+  childSavingsAccountData,
+} from '../../common/utils/child-savings.util';
+import {
+  customerProfileCreateData,
+  normalizePhone,
+} from '../../common/utils/customer-profile.util';
 
 import * as bcrypt from 'bcryptjs';
 
@@ -53,44 +63,45 @@ export class TellerService {
 
 
 
-  async registerCustomer(dto: RegisterCustomerDto, user: JwtPayload) {
-
+  async registerCustomer(dto: RegisterCustomerDto, user: JwtPayload, photoUrl?: string) {
     if (!user.branchId) throw new ForbiddenException('User must be assigned to a branch');
+    if (!photoUrl) throw new BadRequestException('Customer photo is required');
 
+    const phone = normalizePhone(dto.phone);
+    const alternatePhone = dto.alternatePhone ? normalizePhone(dto.alternatePhone) : undefined;
 
+    const existing = await this.prisma.customer.findFirst({
+      where: {
+        OR: [
+          { phone },
+          ...(dto.bvn ? [{ bvn: dto.bvn }] : []),
+          ...(dto.nin ? [{ nin: dto.nin }] : []),
+        ],
+      },
+    });
+    if (existing) {
+      throw new ConflictException('Phone, BVN, or NIN is already registered');
+    }
 
     const customerNumber = generateCustomerNumber();
-
-
+    const pinHash = dto.pin ? await bcrypt.hash(dto.pin, 12) : undefined;
 
     const customer = await this.prisma.customer.create({
-
       data: {
-
         customerNumber,
-
         paymentRef: generatePaymentRef(customerNumber),
-
-        ...dto,
-
-        dateOfBirth: new Date(dto.dateOfBirth),
-
-        monthlyIncome: dto.monthlyIncome,
-
+        ...customerProfileCreateData({ ...dto, phone, alternatePhone }, photoUrl),
+        pinHash,
+        appEnabled: Boolean(pinHash),
+        kycStatus: CustomerKycStatus.PENDING,
         branchId: user.branchId,
-
         registeredById: user.sub,
-
+        registrationSource: RegistrationSource.BRANCH,
       },
-
       include: { branch: true, registeredBy: { select: { firstName: true, lastName: true } } },
-
     });
 
-
-
     return customer;
-
   }
 
 
@@ -183,18 +194,19 @@ export class TellerService {
 
 
 
-  async openAccount(dto: OpenAccountDto, user: JwtPayload) {
+  async openAccount(dto: OpenAccountDto, user: JwtPayload, childPhotoUrl?: string) {
 
     if (!user.branchId) throw new ForbiddenException('User must be assigned to a branch');
-
-
 
     const customer = await this.prisma.customer.findUnique({ where: { id: dto.customerId } });
 
     if (!customer) throw new NotFoundException('Customer not found');
 
-    if (dto.type === AccountType.MY_PIKIN && !dto.maturityDate) {
-      throw new BadRequestException('Maturity date is required for My Pikin accounts');
+    if (dto.type === AccountType.MY_PIKIN) {
+      assertChildSavingsOpenInput(dto, {
+        photoRequired: true,
+        hasPhoto: Boolean(childPhotoUrl),
+      });
     }
 
     if (dto.appPin) {
@@ -215,6 +227,15 @@ export class TellerService {
 
     const account = await this.prisma.$transaction(async (tx) => {
 
+      const childFields =
+        dto.type === AccountType.MY_PIKIN
+          ? childSavingsAccountData(dto, childPhotoUrl)
+          : {
+              label: dto.label,
+              maturityDate: dto.maturityDate ? new Date(dto.maturityDate) : undefined,
+              contributionFrequency: dto.contributionFrequency,
+            };
+
       const newAccount = await tx.account.create({
 
         data: {
@@ -223,8 +244,7 @@ export class TellerService {
 
           type: dto.type,
           status: AccountStatus.ACTIVE,
-          label: dto.label,
-          maturityDate: dto.maturityDate ? new Date(dto.maturityDate) : undefined,
+          ...childFields,
           customerId: dto.customerId,
 
           branchId: user.branchId!,
@@ -238,6 +258,16 @@ export class TellerService {
       });
 
 
+
+      const priorCount = await tx.account.count({
+        where: { customerId: dto.customerId, id: { not: newAccount.id } },
+      });
+      if (dto.type === AccountType.SAVINGS || priorCount === 0) {
+        await tx.customer.update({
+          where: { id: dto.customerId },
+          data: { paymentRef: generatePaymentRef(newAccount.accountNumber) },
+        });
+      }
 
       if (dto.initialDeposit && dto.initialDeposit > 0) {
 

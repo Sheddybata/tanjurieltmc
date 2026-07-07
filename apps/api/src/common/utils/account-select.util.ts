@@ -1,6 +1,5 @@
 import { AccountStatus, Prisma } from '@tanjuriel/database';
 
-/** Account fields that exist on all deployed databases (excludes label/maturityDate until migration runs). */
 export const customerAccountSelect = {
   id: true,
   accountNumber: true,
@@ -11,6 +10,14 @@ export const customerAccountSelect = {
   heldBalance: true,
   currency: true,
   interestRate: true,
+  label: true,
+  maturityDate: true,
+  contributionFrequency: true,
+  childPhotoUrl: true,
+  childDateOfBirth: true,
+  childSchool: true,
+  fatherName: true,
+  motherName: true,
   customerId: true,
   branchId: true,
   openedAt: true,

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, FormEvent, useEffect, Suspense } from 'react';
+import { useState, FormEvent, useEffect, Suspense, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { Header } from '@/components/layout/header';
@@ -11,17 +11,21 @@ import { Button } from '@/components/ui/button';
 import { api } from '@/lib/api';
 import { formatMoneyForApi } from '@/lib/utils';
 import { TELLER_OPEN_ACCOUNT_TYPES } from '@/lib/account-types';
+import { CONTRIBUTION_FREQUENCY_OPTIONS } from '@/lib/contribution-frequency';
+import { formatCustomerOptionLabel } from '@/lib/member-id';
 
 interface CustomerOption {
   id: string;
-  customerNumber: string;
   firstName: string;
   lastName: string;
+  phone: string;
+  accounts?: { accountNumber: string; type: string }[];
 }
 
 function OpenAccountForm() {
   const searchParams = useSearchParams();
   const preselectedCustomer = searchParams.get('customerId') ?? '';
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   const [customers, setCustomers] = useState<CustomerOption[]>([]);
   const [customersError, setCustomersError] = useState('');
@@ -29,6 +33,11 @@ function OpenAccountForm() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [accountType, setAccountType] = useState('SAVINGS');
+  const [contributionFrequency, setContributionFrequency] = useState('DAILY');
+  const [photoName, setPhotoName] = useState('');
+
+  const showFrequency = accountType === 'DAILY_SAVINGS' || accountType === 'MY_PIKIN';
+  const isChildSavings = accountType === 'MY_PIKIN';
 
   useEffect(() => {
     setCustomerId(preselectedCustomer);
@@ -58,19 +67,32 @@ function OpenAccountForm() {
     }
 
     const form = new FormData(e.currentTarget);
+    form.set('customerId', customerId);
+    form.set('type', accountType);
+    if (showFrequency) {
+      form.set('contributionFrequency', contributionFrequency);
+    }
+
+    const initialDeposit = form.get('initialDeposit');
+    if (initialDeposit) {
+      form.set('initialDeposit', formatMoneyForApi(String(initialDeposit)));
+    }
+
+    if (isChildSavings) {
+      const photo = photoInputRef.current?.files?.[0];
+      if (!photo) {
+        setMessage('A photo of the child is required for Child Savings');
+        setLoading(false);
+        return;
+      }
+      form.set('childPhoto', photo);
+    }
 
     try {
-      const res = await api.post<{ success: boolean; data: { accountNumber: string } }>('/teller/accounts', {
-        customerId,
-        type: accountType,
-        initialDeposit: form.get('initialDeposit')
-          ? formatMoneyForApi(String(form.get('initialDeposit')))
-          : undefined,
-        appPin: form.get('appPin') || undefined,
-        label: form.get('label') || undefined,
-        maturityDate: form.get('maturityDate') || undefined,
-      });
+      const res = await api.post<{ success: boolean; data: { accountNumber: string } }>('/teller/accounts', form);
       setMessage(`Account opened: ${res.data.accountNumber}`);
+      setPhotoName('');
+      if (photoInputRef.current) photoInputRef.current.value = '';
     } catch (err: unknown) {
       setMessage((err as { message?: string })?.message || 'Failed to open account');
     } finally {
@@ -101,7 +123,7 @@ function OpenAccountForm() {
             { value: '', label: customers.length ? 'Select customer...' : 'No customers loaded' },
             ...customers.map((c) => ({
               value: c.id,
-              label: `${c.firstName} ${c.lastName} (${c.customerNumber})`,
+              label: formatCustomerOptionLabel(c.firstName, c.lastName, c.accounts, c.phone),
             })),
           ]}
         />
@@ -113,11 +135,38 @@ function OpenAccountForm() {
           onChange={(e) => setAccountType(e.target.value)}
           options={[...TELLER_OPEN_ACCOUNT_TYPES]}
         />
-        {accountType === 'MY_PIKIN' && (
+        {showFrequency && (
+          <Select
+            name="contributionFrequency"
+            label="Contribution frequency"
+            required
+            value={contributionFrequency}
+            onChange={(e) => setContributionFrequency(e.target.value)}
+            options={[...CONTRIBUTION_FREQUENCY_OPTIONS]}
+          />
+        )}
+        {isChildSavings && (
           <>
-            <Input name="label" label="Child name / label" placeholder="e.g. Ada Eze" required />
+            <Input name="label" label="Child's full name" placeholder="e.g. Ada Eze" required />
+            <Input name="childDateOfBirth" label="Date of birth" type="date" required />
+            <Input name="childSchool" label="Current school" placeholder="e.g. St. Mary Primary School" required />
+            <Input name="fatherName" label="Father's name" placeholder="e.g. John Eze" required />
+            <Input name="motherName" label="Mother's name" placeholder="e.g. Mary Eze" required />
             <Input name="maturityDate" label="Maturity date" type="date" required />
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">Child photo (required)</label>
+              <input
+                ref={photoInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                required
+                className="block w-full text-sm text-gray-600 file:mr-3 file:rounded-md file:border-0 file:bg-brand-50 file:px-3 file:py-2 file:text-sm file:font-medium file:text-brand-700"
+                onChange={(e) => setPhotoName(e.target.files?.[0]?.name ?? '')}
+              />
+              {photoName && <p className="mt-1 text-xs text-gray-500">{photoName}</p>}
+            </div>
             <p className="text-xs text-gray-500">
+              Members can open multiple Child Savings accounts (different children or maturity dates).
               After maturity, the member can request withdrawal on mobile; manager approves before cash is paid at branch.
             </p>
           </>
@@ -143,7 +192,7 @@ function OpenAccountForm() {
 export default function OpenAccountPage() {
   return (
     <DashboardLayout>
-      <Header title="Open Account" subtitle="Savings, Daily Savings, or My Pikin Savings" />
+      <Header title="Open Account" subtitle="Savings, Daily Savings, or Child Savings" />
       <div className="p-8">
         <Suspense fallback={<Card className="max-w-lg p-6 text-sm text-gray-500">Loading…</Card>}>
           <OpenAccountForm />

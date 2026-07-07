@@ -6,9 +6,13 @@ import { join } from 'path';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { ensureCollateralUploadDir } from './common/utils/collateral-upload.util';
+import { ensureChildSavingsUploadDir } from './common/utils/child-savings-upload.util';
+import { ensureCustomerPhotoUploadDir } from './common/utils/customer-photo-upload.util';
 
 async function bootstrap() {
   ensureCollateralUploadDir();
+  ensureChildSavingsUploadDir();
+  ensureCustomerPhotoUploadDir();
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));

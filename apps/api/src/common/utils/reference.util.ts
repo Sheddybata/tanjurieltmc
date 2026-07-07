@@ -34,8 +34,9 @@ export function generatePaymentRequestRef(): string {
   return generateReference(PAYMENT_REQUEST_REF_PREFIX);
 }
 
-export function generatePaymentRef(customerNumber: string): string {
-  return `${PAYMENT_REF_PREFIX}-${customerNumber}`;
+/** Payment narration reference — uses the member's 10-digit account number. */
+export function generatePaymentRef(accountNumber: string): string {
+  return `${PAYMENT_REF_PREFIX}-${accountNumber}`;
 }
 
 export function calculateLoanSchedule(

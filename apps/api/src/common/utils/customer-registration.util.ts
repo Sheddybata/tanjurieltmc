@@ -8,6 +8,10 @@ import {
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import {
+  customerProfileCreateData,
+  normalizePhone,
+} from '../../common/utils/customer-profile.util';
+import {
   generateAccountNumber,
   generateCustomerNumber,
   generatePaymentRef,
@@ -19,8 +23,15 @@ export async function registerMobileCustomer(
   prisma: PrismaService,
   authService: CustomerAuthService,
   dto: CustomerRegisterDto,
+  photoUrl?: string,
 ) {
+  if (!photoUrl) {
+    throw new BadRequestException('Customer photo is required');
+  }
+
   const phone = normalizePhone(dto.phone);
+  const alternatePhone = dto.alternatePhone ? normalizePhone(dto.alternatePhone) : undefined;
+  const profileDto = { ...dto, phone, alternatePhone };
 
   const existing = await prisma.customer.findFirst({
     where: {
@@ -38,30 +49,18 @@ export async function registerMobileCustomer(
   if (!teller) throw new NotFoundException('Default teller not configured');
 
   const customerNumber = generateCustomerNumber();
+  const accountNumber = generateAccountNumber();
   const pinHash = await bcrypt.hash(dto.pin, 12);
 
-  const customer = await prisma.$transaction(async (tx) => {
+  await prisma.$transaction(async (tx) => {
     const created = await tx.customer.create({
       data: {
         customerNumber,
-        paymentRef: generatePaymentRef(customerNumber),
-        firstName: dto.firstName,
-        lastName: dto.lastName,
-        middleName: dto.middleName,
-        dateOfBirth: new Date(dto.dateOfBirth),
-        gender: dto.gender,
+        paymentRef: generatePaymentRef(accountNumber),
+        ...customerProfileCreateData(profileDto, photoUrl),
         phone,
-        email: dto.email,
-        bvn: dto.bvn,
-        nin: dto.nin,
-        address: dto.address,
-        city: dto.city,
-        state: dto.state,
-        occupation: dto.occupation,
-        employer: dto.employer,
-        monthlyIncome: dto.monthlyIncome,
-        kycStatus: CustomerKycStatus.PENDING,
         pinHash,
+        kycStatus: CustomerKycStatus.PENDING,
         appEnabled: true,
         branchId: branch.id,
         registeredById: teller.id,
@@ -71,7 +70,7 @@ export async function registerMobileCustomer(
 
     await tx.account.create({
       data: {
-        accountNumber: generateAccountNumber(),
+        accountNumber,
         type: AccountType.SAVINGS,
         status: AccountStatus.ACTIVE,
         customerId: created.id,
@@ -80,19 +79,9 @@ export async function registerMobileCustomer(
         openedAt: new Date(),
       },
     });
-
-    return created;
   });
 
-  const loginResult = await authService.login({ phone, pin: dto.pin });
-  return loginResult;
-}
-
-function normalizePhone(phone: string): string {
-  const digits = phone.replace(/\D/g, '');
-  if (digits.startsWith('234')) return `0${digits.slice(3)}`;
-  if (digits.startsWith('0')) return digits;
-  return `0${digits}`;
+  return authService.login({ phone, pin: dto.pin });
 }
 
 export function validateCollateralInput(

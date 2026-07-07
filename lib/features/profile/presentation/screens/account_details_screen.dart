@@ -74,17 +74,11 @@ class AccountDetailsScreen extends ConsumerWidget {
           _SectionTitle(title: 'Account'),
           const SizedBox(height: 8),
           _CopyField(
-            icon: Icons.account_balance_wallet_outlined,
-            label: 'Account number',
+            icon: Icons.badge_outlined,
+            label: 'Member ID',
             value: user?.accountNumber == null || user!.accountNumber.isEmpty
                 ? '—'
                 : AccountNumberFormatter.display(user.accountNumber),
-          ),
-          const SizedBox(height: 10),
-          _CopyField(
-            icon: Icons.tag_outlined,
-            label: 'Payment reference',
-            value: user?.paymentRef ?? '—',
             highlighted: true,
           ),
           const SizedBox(height: 20),
@@ -115,7 +109,7 @@ class AccountDetailsScreen extends ConsumerWidget {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    'Use your payment reference when funding from an external bank. For changes to account details, visit our Jos branch.',
+                    'Use your 10-digit member ID in bank transfer narrations when funding your account. For changes to account details, visit our Jos branch.',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ),

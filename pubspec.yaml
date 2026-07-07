@@ -1,5 +1,5 @@
 name: tanjuriel_microfinance
-description: Customer-facing microfinance mobile banking application.
+description: Tanjuriel TMC — customer mobile banking application.
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -33,3 +33,6 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/data/states.json
+    - assets/data/lgas.json

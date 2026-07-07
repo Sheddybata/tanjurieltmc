@@ -158,7 +158,7 @@ class MockApiHandler {
   }) async {
     await Future<void>.delayed(const Duration(milliseconds: 400));
     final normalized = _normalizePath(path);
-    final body = data is Map ? Map<String, dynamic>.from(data) : <String, dynamic>{};
+    final body = _bodyFromData(data);
 
     switch (normalized) {
       case '/customer/auth/login':
@@ -196,6 +196,26 @@ class MockApiHandler {
             'type': 'WITHDRAWAL',
           },
         });
+      case '/customer/accounts':
+        final type = body['type'] as String? ?? 'DAILY_SAVINGS';
+        return _response({
+          'success': true,
+          'data': {
+            'id': 'mock-acct-${DateTime.now().millisecondsSinceEpoch}',
+            'accountNumber': '9012345${DateTime.now().millisecondsSinceEpoch % 1000}'.padRight(10, '0').substring(0, 10),
+            'type': type,
+            'status': 'ACTIVE',
+            'balance': 0,
+            'availableBalance': 0,
+            'contributionFrequency': body['contributionFrequency'] ?? 'DAILY',
+            if (body['label'] != null) 'label': body['label'],
+            if (body['maturityDate'] != null) 'maturityDate': body['maturityDate'],
+            if (body['childDateOfBirth'] != null) 'childDateOfBirth': body['childDateOfBirth'],
+            if (body['childSchool'] != null) 'childSchool': body['childSchool'],
+            if (body['fatherName'] != null) 'fatherName': body['fatherName'],
+            if (body['motherName'] != null) 'motherName': body['motherName'],
+          },
+        });
       case '/customer/transfers/name-enquiry':
         final account = (body['accountNumber'] as String?)?.trim() ?? '';
         if (account == '0000000000') {
@@ -214,6 +234,8 @@ class MockApiHandler {
             'response_code': '00',
           },
         });
+      case '/customer/loans/quote':
+        return _response({'success': true, 'data': _mockLoanQuote(body)});
       case '/customer/loans/apply':
         return _response(_applyLoan(body));
       default:
@@ -241,9 +263,48 @@ class MockApiHandler {
     return uri.path;
   }
 
+  static Map<String, dynamic> _bodyFromData(dynamic data) {
+    if (data is Map) return Map<String, dynamic>.from(data);
+    if (data is FormData) {
+      final map = <String, dynamic>{};
+      for (final field in data.fields) {
+        map[field.key] = field.value;
+      }
+      return map;
+    }
+    return {};
+  }
+
+  static Future<List<int>> getBytes(String path) async {
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    final normalized = _normalizePath(path);
+    if (normalized.contains('/child-savings/statement.pdf')) {
+      // Minimal valid PDF stub for mock mode
+      return '%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF'.codeUnits;
+    }
+    return [];
+  }
+
   static bool _isBlank(dynamic value) {
     final text = (value as String?)?.trim();
     return text == null || text.isEmpty;
+  }
+
+  static Map<String, dynamic> _mockLoanQuote(Map<String, dynamic> body) {
+    final principal = (body['principalAmount'] as num?)?.toDouble() ?? 0;
+    final periods = (body['tenurePeriods'] as num?)?.toInt() ?? 1;
+    final interest = principal * 0.10;
+    final upfront = principal * 0.10;
+    final total = principal + interest;
+    return {
+      'openingFee': 1000,
+      'upfrontFee': upfront,
+      'flatInterestAmount': interest,
+      'totalRepayable': total,
+      'installmentAmount': periods > 0 ? total / periods : total,
+      'netDisbursement': principal - upfront,
+      'tenureMonths': periods,
+    };
   }
 
   static Map<String, dynamic> _applyLoan(Map<String, dynamic> body) {
@@ -258,7 +319,7 @@ class MockApiHandler {
       orElse: () => _loanProducts().first,
     );
     final amount = (body['principalAmount'] as num?)?.toDouble() ?? 50000;
-    final tenure = (body['tenureMonths'] as num?)?.toInt() ?? 6;
+    final tenure = (body['tenurePeriods'] as num?)?.toInt() ?? (body['tenureMonths'] as num?)?.toInt() ?? 6;
     if (_isBlank(body['collateral'])) {
       return {'success': false, 'message': 'Collateral description is required'};
     }
@@ -376,14 +437,14 @@ class MockApiHandler {
         'lastName': 'Customer',
         'email': 'demo.customer@tanjuriel.com',
         'phone': AppConfig.demoPhone,
-        'paymentRef': 'TJC-CUSSEED001',
+        'paymentRef': 'TJC-9012345678',
         'kycStatus': 'VERIFIED',
         'bvn': '22222222222',
         'nin': null,
         'accounts': [
           {
             'id': _accountId,
-            'accountNumber': 'TMFSEED001',
+            'accountNumber': '9012345678',
             'type': 'SAVINGS',
             'status': 'ACTIVE',
             'balance': 25000,
@@ -401,21 +462,21 @@ class MockApiHandler {
         'bankName': 'Zenith Bank',
         'accountName': 'Tanjuriel Thrift and Microcredit Cooperative LTD',
         'accountNumber': '1234567890',
-        'instructions': 'Use your payment reference in the transfer narration.',
+        'instructions': 'Use your 10-digit member ID in the transfer narration.',
       },
       {
         'provider': 'OPAY',
         'bankName': 'Opay',
         'accountName': 'Tanjuriel Thrift and Microcredit Cooperative LTD',
         'accountNumber': '8012345678',
-        'instructions': 'Use your payment reference in the transfer narration.',
+        'instructions': 'Use your 10-digit member ID in the transfer narration.',
       },
       {
         'provider': 'MONIEPOINT',
         'bankName': 'Moniepoint',
         'accountName': 'Tanjuriel Thrift and Microcredit Cooperative LTD',
         'accountNumber': '9876543210',
-        'instructions': 'Use your payment reference in the transfer narration.',
+        'instructions': 'Use your 10-digit member ID in the transfer narration.',
       },
     ];
   }

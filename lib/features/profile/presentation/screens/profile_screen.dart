@@ -64,7 +64,7 @@ class ProfileScreen extends ConsumerWidget {
             title: 'Account Details',
             subtitle: user?.accountNumber == null || user!.accountNumber.isEmpty
                 ? null
-                : AccountNumberFormatter.display(user.accountNumber),
+                : 'Member ID ${AccountNumberFormatter.display(user.accountNumber)}',
             onTap: () => context.push(RouteNames.accountDetails),
           ),
           const SizedBox(height: 16),

@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:tanjuriel_microfinance/core/network/api_client.dart';
 import 'package:tanjuriel_microfinance/core/security/secure_storage_service.dart';
 import 'package:tanjuriel_microfinance/features/auth/domain/models/customer_registration_input.dart';
@@ -14,9 +15,17 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<UserModel> register(CustomerRegistrationInput input) async {
+    final form = FormData.fromMap({
+      ...input.toJson(),
+      'customerPhoto': await MultipartFile.fromFile(
+        input.photoPath,
+        filename: 'member-photo.jpg',
+      ),
+    });
+
     final response = await _api.post<Map<String, dynamic>>(
       '/customer/auth/register',
-      data: input.toJson(),
+      data: form,
     );
 
     final body = response.data;
@@ -91,3 +100,4 @@ class AuthRepositoryImpl implements AuthRepository {
 
   static void setCurrentUser(UserModel? user) => _currentUser = user;
 }
+

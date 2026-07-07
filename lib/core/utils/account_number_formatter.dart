@@ -20,7 +20,7 @@ class AccountTypeLabels {
       'CURRENT' => 'Current account',
       'FIXED_DEPOSIT' => 'Fixed deposit',
       'LOAN' => 'Loan account',
-      'MY_PIKIN' => 'My Pikin (kids savings)',
+      'MY_PIKIN' => 'Child Savings',
       'DAILY_SAVINGS' => 'Daily savings',
       _ => 'Savings account',
     };

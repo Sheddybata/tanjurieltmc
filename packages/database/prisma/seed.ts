@@ -153,11 +153,13 @@ async function main() {
     update: {
       type: AccountType.DAILY_SAVINGS,
       status: AccountStatus.ACTIVE,
+      contributionFrequency: 'DAILY',
     },
     create: {
       accountNumber: '9012345679',
       type: AccountType.DAILY_SAVINGS,
       status: AccountStatus.ACTIVE,
+      contributionFrequency: 'DAILY',
       balance: 12000,
       availableBalance: 12000,
       heldBalance: 0,
@@ -178,6 +180,7 @@ async function main() {
       status: AccountStatus.ACTIVE,
       label: 'Ada Demo',
       maturityDate: pikinMaturity,
+      contributionFrequency: 'MONTHLY',
     },
     create: {
       accountNumber: '9012345680',
@@ -185,6 +188,7 @@ async function main() {
       status: AccountStatus.ACTIVE,
       label: 'Ada Demo',
       maturityDate: pikinMaturity,
+      contributionFrequency: 'MONTHLY',
       balance: 25000,
       availableBalance: 25000,
       heldBalance: 0,
@@ -227,6 +231,23 @@ async function main() {
         processingFee: 500,
         requiresCollateral: true,
       },
+  });
+
+  await prisma.loanProduct.upsert({
+    where: { code: 'ASSET-001' },
+    update: {},
+    create: {
+      code: 'ASSET-001',
+      name: 'Asset Financing',
+      description: 'Finance equipment, vehicles, and other income-generating assets',
+      minAmount: 100000,
+      maxAmount: 10000000,
+      minTenureMonths: 3,
+      maxTenureMonths: 36,
+      interestRate: 0.025,
+      processingFee: 5000,
+      requiresCollateral: true,
+    },
   });
 
   const categories = [

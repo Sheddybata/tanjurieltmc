@@ -34,9 +34,10 @@ class ApiClient {
       return mockRequest<T>(endpoint, options);
     }
 
+    const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
     const token = this.getToken();
     const headers: HeadersInit = {
-      'Content-Type': 'application/json',
+      ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...options.headers,
     };
@@ -55,6 +56,17 @@ class ApiClient {
         localStorage.clear();
         window.location.href = '/staff/login';
       }
+    }
+
+    const contentType = response.headers.get('content-type') ?? '';
+    if (contentType.includes('application/pdf')) {
+      if (!response.ok) {
+        throw {
+          message: 'Request failed',
+          statusCode: response.status,
+        } as ApiError;
+      }
+      return response.blob() as Promise<T>;
     }
 
     const data = await response.json();
@@ -98,8 +110,18 @@ class ApiClient {
   post<T>(endpoint: string, body?: unknown) {
     return this.request<T>(endpoint, {
       method: 'POST',
-      body: body ? JSON.stringify(body) : undefined,
+      body: body instanceof FormData ? body : body ? JSON.stringify(body) : undefined,
     });
+  }
+
+  async downloadPdf(endpoint: string, filename: string): Promise<void> {
+    const blob = await this.request<Blob>(endpoint, { method: 'GET' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(url);
   }
 
   patch<T>(endpoint: string, body?: unknown) {

@@ -2,12 +2,25 @@ import { Injectable } from '@nestjs/common';
 import { TransactionType, LoanStatus, PaymentRequestStatus, PaymentRequestType } from '@tanjuriel/database';
 import { DashboardMetrics } from '@tanjuriel/shared';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { CacheService } from '../../common/cache/cache.service';
+
+const DASHBOARD_CACHE_KEY = 'reporting:dashboard:v1';
+const DASHBOARD_CACHE_TTL_SECONDS = 30;
 
 @Injectable()
 export class ReportingService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private cache: CacheService,
+  ) {}
 
   async getDashboardMetrics(): Promise<DashboardMetrics> {
+    return this.cache.wrap(DASHBOARD_CACHE_KEY, DASHBOARD_CACHE_TTL_SECONDS, () =>
+      this.computeDashboardMetrics(),
+    );
+  }
+
+  private async computeDashboardMetrics(): Promise<DashboardMetrics> {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -126,5 +139,65 @@ export class ReportingService {
     }
 
     return Array.from(dailyMap.values()).sort((a, b) => a.date.localeCompare(b.date));
+  }
+
+  /**
+   * Persists an end-of-day summary into the DailySnapshot table so reports can
+   * read a single pre-computed row instead of scanning the transactions table.
+   * Safe to re-run for the same day — it upserts on the unique date.
+   */
+  async createDailySnapshot(date = new Date()) {
+    const start = new Date(date);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(start);
+    end.setDate(end.getDate() + 1);
+
+    const dayRange = { gte: start, lt: end };
+
+    const [deposits, withdrawals, disbursed, repayments, activeAccounts, activeLoans, overdueLoans, overdueSchedules] =
+      await Promise.all([
+        this.prisma.transaction.aggregate({
+          where: { type: TransactionType.DEPOSIT, status: 'COMPLETED', createdAt: dayRange },
+          _sum: { amount: true },
+        }),
+        this.prisma.transaction.aggregate({
+          where: { type: TransactionType.WITHDRAWAL, status: 'COMPLETED', createdAt: dayRange },
+          _sum: { amount: true },
+        }),
+        this.prisma.transaction.aggregate({
+          where: { type: TransactionType.LOAN_DISBURSEMENT, status: 'COMPLETED', createdAt: dayRange },
+          _sum: { amount: true },
+        }),
+        this.prisma.transaction.aggregate({
+          where: { type: TransactionType.LOAN_REPAYMENT, status: 'COMPLETED', createdAt: dayRange },
+          _sum: { amount: true },
+        }),
+        this.prisma.account.count({ where: { status: 'ACTIVE' } }),
+        this.prisma.loan.count({ where: { status: { in: [LoanStatus.DISBURSED, LoanStatus.ACTIVE] } } }),
+        this.prisma.loan.count({ where: { status: LoanStatus.OVERDUE } }),
+        this.prisma.loanSchedule.count({ where: { isPaid: false, dueDate: { lt: new Date() } } }),
+      ]);
+
+    // portfolioAtRisk is stored as Decimal(5,4); clamp so an unusually high ratio can never overflow the column.
+    const portfolioAtRisk = activeLoans > 0 ? Math.min(overdueSchedules / activeLoans, 9.9999) : 0;
+
+    const values = {
+      totalDeposits: deposits._sum.amount ?? 0,
+      totalWithdrawals: withdrawals._sum.amount ?? 0,
+      totalLoansDisbursed: disbursed._sum.amount ?? 0,
+      totalLoanRepayments: repayments._sum.amount ?? 0,
+      activeAccounts,
+      activeLoans,
+      overdueLoans,
+      portfolioAtRisk,
+    };
+
+    await this.prisma.dailySnapshot.upsert({
+      where: { date: start },
+      create: { date: start, ...values },
+      update: values,
+    });
+
+    return { date: start, ...values };
   }
 }

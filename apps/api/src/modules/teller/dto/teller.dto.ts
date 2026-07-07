@@ -9,79 +9,11 @@ import {
   IsNotEmpty,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Gender, AccountType } from '@tanjuriel/database';
+import { Gender, AccountType, ContributionFrequency } from '@tanjuriel/database';
 import { IsEntityId } from '../../../common/validators/entity-id.decorator';
 import { IsMoneyAmount, TransformMoney } from '../../../common/validators/money.decorator';
 
-export class RegisterCustomerDto {
-  @ApiProperty()
-  @IsString()
-  firstName: string;
-
-  @ApiProperty()
-  @IsString()
-  lastName: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
-  middleName?: string;
-
-  @ApiProperty()
-  @IsDateString()
-  dateOfBirth: string;
-
-  @ApiProperty({ enum: Gender })
-  @IsEnum(Gender)
-  gender: Gender;
-
-  @ApiProperty()
-  @IsString()
-  phone: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsEmail()
-  email?: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
-  bvn?: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
-  nin?: string;
-
-  @ApiProperty()
-  @IsString()
-  address: string;
-
-  @ApiProperty()
-  @IsString()
-  city: string;
-
-  @ApiProperty()
-  @IsString()
-  state: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
-  occupation?: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
-  employer?: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  monthlyIncome?: number;
-}
+export { RegisterCustomerDto } from './register-customer.dto';
 
 export class OpenAccountDto {
   @ApiProperty()
@@ -104,15 +36,40 @@ export class OpenAccountDto {
   @IsString()
   appPin?: string;
 
-  @ApiPropertyOptional({ description: 'Child or account label (My Pikin)' })
+  @ApiPropertyOptional({ description: "Child's full name (Child Savings)" })
   @IsOptional()
   @IsString()
   label?: string;
 
-  @ApiPropertyOptional({ description: 'Maturity date for My Pikin withdrawals (ISO date)' })
+  @ApiPropertyOptional({ description: 'Maturity date for Child Savings (ISO date)' })
   @IsOptional()
   @IsDateString()
   maturityDate?: string;
+
+  @ApiPropertyOptional({ enum: ContributionFrequency })
+  @IsOptional()
+  @IsEnum(ContributionFrequency)
+  contributionFrequency?: ContributionFrequency;
+
+  @ApiPropertyOptional({ description: "Child's date of birth (ISO date)" })
+  @IsOptional()
+  @IsDateString()
+  childDateOfBirth?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  childSchool?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  fatherName?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  motherName?: string;
 }
 
 export class EnableMobileAccessDto {

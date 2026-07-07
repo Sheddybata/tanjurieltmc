@@ -12,8 +12,20 @@ class AppConfig {
   static const demoPhone = '08012345678';
   static const demoPin = '1234';
 
-  static const apiBaseUrl = String.fromEnvironment(
+  static const String _rawApiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
     defaultValue: 'http://10.0.2.2:4000/api/v1',
   );
+
+  /// NestJS routes live under `/api/v1`. Accepts host-only defines too.
+  static String get apiBaseUrl {
+    var url = _rawApiBaseUrl.trim();
+    while (url.endsWith('/')) {
+      url = url.substring(0, url.length - 1);
+    }
+    if (!url.endsWith('/api/v1')) {
+      url = '$url/api/v1';
+    }
+    return url;
+  }
 }

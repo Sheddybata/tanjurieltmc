@@ -4,17 +4,14 @@ abstract class LoanRepository {
   Future<List<LoanProductModel>> getProducts();
   Future<List<LoanModel>> getLoans();
   Future<LoanModel> getLoan(String id);
-  Future<LoanModel> apply({
-    required String productId,
+  Future<Map<String, dynamic>> quote({
     required double principalAmount,
-    required int tenureMonths,
-    String? purpose,
+    required int tenurePeriods,
+    required String repaymentPlan,
+  });
+  Future<LoanModel> apply({
+    required Map<String, dynamic> fields,
     required String pin,
-    String? collateral,
-    String? collateralType,
-    double? collateralEstimatedValue,
-    String? guarantorName,
-    String? guarantorPhone,
     String? collateralPhotoPath,
   });
 }

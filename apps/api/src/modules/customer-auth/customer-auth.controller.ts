@@ -1,5 +1,11 @@
-import { Body, Controller, Post, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Post, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiBearerAuth, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  customerPhotoFilter,
+  customerPhotoPublicPath,
+  customerPhotoStorage,
+} from '../../common/utils/customer-photo-upload.util';
 import { Public } from '../../common/decorators/auth.decorators';
 import { User } from '../../common/decorators/auth.decorators';
 import { CustomerGuard, JwtAuthGuard } from '../../common/guards/auth.guards';
@@ -15,8 +21,17 @@ export class CustomerAuthController {
   @Public()
   @Post('register')
   @ApiOperation({ summary: 'Self-register via mobile app (KYC pending until teller verifies)' })
-  async register(@Body() dto: CustomerRegisterDto) {
-    const result = await this.customerAuthService.register(dto);
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(
+    FileInterceptor('customerPhoto', {
+      storage: customerPhotoStorage,
+      fileFilter: customerPhotoFilter,
+      limits: { fileSize: 5 * 1024 * 1024 },
+    }),
+  )
+  async register(@Body() dto: CustomerRegisterDto, @UploadedFile() customerPhoto?: Express.Multer.File) {
+    const photoUrl = customerPhoto ? customerPhotoPublicPath(customerPhoto.filename) : undefined;
+    const result = await this.customerAuthService.register(dto, photoUrl);
     return { success: true, data: result };
   }
 

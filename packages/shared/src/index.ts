@@ -98,6 +98,20 @@ export const PAYMENT_REQUEST_REF_PREFIX = 'REQ';
 
 export const PAYMENT_REF_PREFIX = 'TJC';
 
+/** Internal account type codes → user-facing labels */
+export const ACCOUNT_TYPE_LABELS: Record<string, string> = {
+  SAVINGS: 'Savings',
+  DAILY_SAVINGS: 'Daily Savings',
+  MY_PIKIN: 'Child Savings',
+  CURRENT: 'Current',
+  FIXED_DEPOSIT: 'Fixed Deposit',
+  LOAN: 'Loan',
+};
+
+export function accountTypeLabel(type: string): string {
+  return ACCOUNT_TYPE_LABELS[type] ?? type.replace(/_/g, ' ');
+}
+
 export type AuthType = 'staff' | 'customer';
 
 export interface ApiResponse<T = unknown> {

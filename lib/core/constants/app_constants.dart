@@ -1,5 +1,5 @@
 class AppConstants {
-  static const String appName = 'Tanjuriel MFB';
+  static const String appName = 'Tanjuriel TMC';
   static const String currencyCode = 'NGN';
   static const String currencySymbol = '₦';
   static const int pinLength = 4;

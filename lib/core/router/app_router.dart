@@ -26,6 +26,7 @@ import 'package:tanjuriel_microfinance/features/profile/presentation/screens/cha
 import 'package:tanjuriel_microfinance/features/profile/presentation/screens/change_pin_screen.dart';
 import 'package:tanjuriel_microfinance/features/profile/presentation/screens/help_center_screen.dart';
 import 'package:tanjuriel_microfinance/features/profile/presentation/screens/profile_screen.dart';
+import 'package:tanjuriel_microfinance/features/savings/presentation/screens/open_account_screen.dart';
 import 'package:tanjuriel_microfinance/features/savings/presentation/screens/request_withdrawal_screen.dart';
 import 'package:tanjuriel_microfinance/features/savings/presentation/screens/savings_screen.dart';
 import 'package:tanjuriel_microfinance/features/profile/presentation/screens/security_settings_screen.dart';
@@ -106,6 +107,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: RouteNames.kycStatus, builder: (_, __) => const KycStatusScreen()),
       GoRoute(path: RouteNames.fundAccount, builder: (_, __) => const FundAccountScreen()),
       GoRoute(path: RouteNames.savings, builder: (_, __) => const SavingsScreen()),
+      GoRoute(
+        path: RouteNames.openAccount,
+        builder: (_, __) => const OpenAccountScreen(),
+      ),
       GoRoute(
         path: RouteNames.requestWithdrawal,
         builder: (_, state) => RequestWithdrawalScreen(account: state.extra as MemberAccount),

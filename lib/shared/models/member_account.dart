@@ -1,3 +1,4 @@
+import 'package:tanjuriel_microfinance/core/constants/contribution_frequency.dart';
 import 'package:tanjuriel_microfinance/core/utils/json_utils.dart';
 
 class MemberAccount {
@@ -9,6 +10,7 @@ class MemberAccount {
     required this.availableBalance,
     this.label,
     this.maturityDate,
+    this.contributionFrequency,
   });
 
   final String id;
@@ -18,23 +20,29 @@ class MemberAccount {
   final double availableBalance;
   final String? label;
   final DateTime? maturityDate;
+  final String? contributionFrequency;
 
-  bool get isMyPikin => type == 'MY_PIKIN';
+  bool get isChildSavings => type == 'MY_PIKIN';
+  bool get isMyPikin => isChildSavings;
   bool get isDailySavings => type == 'DAILY_SAVINGS';
   bool get canTransferOnMobile => type != 'MY_PIKIN';
 
   bool get canRequestWithdrawalOnMobile => isMyPikin && isMature;
 
   bool get isMature {
-    if (!isMyPikin || maturityDate == null) return true;
-    return !maturityDate!.isAfter(DateTime.now());
+    if (!isMyPikin) return false;
+    if (maturityDate == null) return false;
+    final today = DateTime.now();
+    final maturity = DateTime(maturityDate!.year, maturityDate!.month, maturityDate!.day);
+    final now = DateTime(today.year, today.month, today.day);
+    return !maturity.isAfter(now);
   }
 
   String get displayName {
     final typeLabel = switch (type) {
       'SAVINGS' => 'Savings',
       'DAILY_SAVINGS' => 'Daily Savings',
-      'MY_PIKIN' => 'My Pikin',
+      'MY_PIKIN' => 'Child Savings',
       'CURRENT' => 'Current',
       'FIXED_DEPOSIT' => 'Fixed Deposit',
       _ => type.replaceAll('_', ' '),
@@ -45,15 +53,21 @@ class MemberAccount {
     return typeLabel;
   }
 
+  String? get frequencyLabel {
+    if (contributionFrequency == null || contributionFrequency!.isEmpty) return null;
+    return ContributionFrequency.label(contributionFrequency!);
+  }
+
   String get mobileRulesSummary {
-    if (isMyPikin) {
+    final freq = frequencyLabel != null ? '$frequencyLabel · ' : '';
+    if (isChildSavings) {
       if (maturityDate != null && !isMature) {
-        return 'Locked until ${maturityDate!.toLocal().toString().split(' ').first}. You can request withdrawal on mobile after maturity.';
+        return '${freq}Locked until ${maturityDate!.toLocal().toString().split(' ').first}. Request withdrawal on mobile after maturity.';
       }
-      return 'Mature — request withdrawal on mobile; manager approves, collect cash at branch';
+      return '${freq}Mature — request withdrawal on mobile; manager approves, collect cash at branch';
     }
     if (isDailySavings) {
-      return 'Transfers require manager approval';
+      return '${freq}Transfers require manager approval';
     }
     return 'Standard savings account';
   }
@@ -73,6 +87,7 @@ class MemberAccount {
       availableBalance: JsonUtils.parseDouble(json['availableBalance'], fallback: JsonUtils.parseDouble(json['balance'])),
       label: json['label'] as String?,
       maturityDate: maturity,
+      contributionFrequency: json['contributionFrequency'] as String?,
     );
   }
 }

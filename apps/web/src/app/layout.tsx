@@ -11,7 +11,7 @@ export const metadata: Metadata = {
     template: '%s | Tanjuriel Microfinance',
   },
   description:
-    'Daily Savings, My Pikin Savings, personal and business loans — accessible financial services for Nigerian communities.',
+    'Daily Savings, Child Savings, personal and business loans — accessible financial services for Nigerian communities.',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -1,9 +1,8 @@
-import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException, ConflictException } from '@nestjs/common';
 import {
-  ApprovalAction,
-  LoanStatus,
   PaymentChannel,
   AccountType,
+  AccountStatus,
   NibssTransactionStatus,
   NibssTransactionType,
 } from '@tanjuriel/database';
@@ -11,19 +10,24 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 import { OperationsService } from '../operations/operations.service';
 import { CustomerAuthService } from '../customer-auth/customer-auth.service';
 import { AlatService } from '../integrations/alat/alat.service';
+import { LoanApplicationService } from '../loans/loan-application.service';
 import {
-  calculateLoanSchedule,
-  generateLoanNumber,
+  generateAccountNumber,
   generateTransactionRef,
   paginate,
   paginationMeta,
 } from '../../common/utils/reference.util';
 import { CustomerDepositRequestDto, CustomerTransferRequestDto, CustomerWithdrawalRequestDto } from '../operations/dto/operations.dto';
-import { CustomerApplyLoanDto } from './dto/customer-loan.dto';
+import { CustomerApplyLoanDto, CustomerLoanQuoteDto } from './dto/customer-loan.dto';
+import { CustomerOpenAccountDto } from './dto/customer-open-account.dto';
 import { NameEnquiryDto } from './dto/transfer.dto';
 import { ensureCustomerKycVerified } from '../../common/utils/kyc.util';
-import { validateCollateralInput } from '../../common/utils/customer-registration.util';
 import { customerAccountsInclude } from '../../common/utils/account-select.util';
+import { memberPaymentRef, primaryMemberAccountNumber } from '../../common/utils/member-id.util';
+import {
+  assertChildSavingsOpenInput,
+  childSavingsAccountData,
+} from '../../common/utils/child-savings.util';
 
 @Injectable()
 export class CustomerPortalService {
@@ -32,6 +36,7 @@ export class CustomerPortalService {
     private operationsService: OperationsService,
     private customerAuthService: CustomerAuthService,
     private alatService: AlatService,
+    private loanApplicationService: LoanApplicationService,
   ) {}
 
   async getTransferBanks() {
@@ -91,8 +96,79 @@ export class CustomerPortalService {
     });
 
     if (!customer) throw new NotFoundException('Customer not found');
-    const { pinHash, ...safe } = customer;
-    return safe;
+    const { pinHash, customerNumber, paymentRef, ...safe } = customer;
+    const memberId = primaryMemberAccountNumber(customer.accounts);
+    return {
+      ...safe,
+      memberId,
+      paymentRef: memberPaymentRef(customer.accounts, paymentRef),
+    };
+  }
+
+  async openAccount(customerId: string, dto: CustomerOpenAccountDto, childPhotoUrl?: string) {
+    await ensureCustomerKycVerified(this.prisma, customerId);
+
+    const customer = await this.prisma.customer.findUnique({
+      where: { id: customerId },
+      select: { id: true, branchId: true },
+    });
+    if (!customer?.branchId) {
+      throw new BadRequestException('Your branch is not set. Visit a Tanjuriel branch to complete setup.');
+    }
+
+    if (dto.type === AccountType.MY_PIKIN) {
+      assertChildSavingsOpenInput(dto, {
+        photoRequired: true,
+        hasPhoto: Boolean(childPhotoUrl),
+      });
+    }
+
+    if (!dto.contributionFrequency) {
+      throw new BadRequestException('Contribution frequency is required');
+    }
+
+    if (dto.type === AccountType.DAILY_SAVINGS) {
+      const existingDaily = await this.prisma.account.findFirst({
+        where: {
+          customerId,
+          type: AccountType.DAILY_SAVINGS,
+          status: { in: [AccountStatus.ACTIVE, AccountStatus.PENDING] },
+        },
+      });
+      if (existingDaily) {
+        throw new ConflictException('You already have a Daily Savings account');
+      }
+    }
+
+    const teller = await this.prisma.user.findUnique({
+      where: { email: 'teller@tanjuriel.com' },
+      select: { id: true },
+    });
+    if (!teller) throw new NotFoundException('Default teller not configured');
+
+    const childFields =
+      dto.type === AccountType.MY_PIKIN
+        ? childSavingsAccountData(dto, childPhotoUrl)
+        : {
+            label: dto.label?.trim(),
+            maturityDate: dto.maturityDate ? new Date(dto.maturityDate) : undefined,
+            contributionFrequency: dto.contributionFrequency,
+          };
+
+    const account = await this.prisma.account.create({
+      data: {
+        accountNumber: generateAccountNumber(),
+        type: dto.type,
+        status: AccountStatus.ACTIVE,
+        ...childFields,
+        customerId,
+        branchId: customer.branchId,
+        openedById: teller.id,
+        openedAt: new Date(),
+      },
+    });
+
+    return account;
   }
 
   async getSettlementAccounts() {
@@ -126,7 +202,7 @@ export class CustomerPortalService {
     });
     if (account?.type === AccountType.MY_PIKIN) {
       throw new BadRequestException(
-        'My Pikin accounts cannot be transferred from. After maturity, use Savings → Request withdrawal.',
+        'Child Savings accounts cannot be transferred from. After maturity, use Savings → Request withdrawal.',
       );
     }
 
@@ -150,7 +226,7 @@ export class CustomerPortalService {
 
     const account = await this.prisma.account.findUnique({
       where: { id: dto.accountId },
-      select: { type: true },
+      select: { type: true, maturityDate: true },
     });
     if (!account) throw new NotFoundException('Account not found');
 
@@ -163,15 +239,25 @@ export class CustomerPortalService {
       accountId: dto.accountId,
       amount: dto.amount,
       channel: PaymentChannel.CASH,
-      narration: dto.narration || 'My Pikin withdrawal request — collect cash at branch after approval',
+      narration: dto.narration || 'Child Savings withdrawal request — collect cash at branch after approval',
       customerId,
     });
   }
 
-  private assertMyPikinMobileWithdrawalAllowed(account: { type: AccountType }) {
+  private assertMyPikinMobileWithdrawalAllowed(account: { type: AccountType; maturityDate?: Date | null }) {
     if (account.type !== AccountType.MY_PIKIN) {
       throw new BadRequestException(
-        'Mobile withdrawal requests are only available for My Pikin accounts after maturity.',
+        'Mobile withdrawal requests are only available for Child Savings accounts after maturity.',
+      );
+    }
+    if (!account.maturityDate) {
+      throw new BadRequestException(
+        'Child Savings maturity date is not set. Contact your branch.',
+      );
+    }
+    if (account.maturityDate > new Date()) {
+      throw new BadRequestException(
+        `Child Savings account is locked until ${account.maturityDate.toISOString().slice(0, 10)}.`,
       );
     }
   }
@@ -304,6 +390,10 @@ export class CustomerPortalService {
     return loan;
   }
 
+  async quoteLoan(dto: CustomerLoanQuoteDto) {
+    return this.loanApplicationService.quoteLoan(dto);
+  }
+
   async applyForLoan(customerId: string, dto: CustomerApplyLoanDto, collateralPhotoUrl?: string) {
     await ensureCustomerKycVerified(this.prisma, customerId);
     const pinValid = await this.customerAuthService.verifyPin(customerId, dto.pin);
@@ -312,71 +402,13 @@ export class CustomerPortalService {
     const customer = await this.prisma.customer.findUnique({ where: { id: customerId } });
     if (!customer) throw new NotFoundException('Customer not found');
 
-    const product = await this.prisma.loanProduct.findUnique({ where: { id: dto.productId } });
-    if (!product || !product.isActive) throw new NotFoundException('Loan product not found');
-
-    validateCollateralInput(product.requiresCollateral, dto);
-    if (product.requiresCollateral && !collateralPhotoUrl) {
-      throw new BadRequestException('Collateral photo is required');
-    }
-
-    const amount = dto.principalAmount;
-    if (amount < Number(product.minAmount) || amount > Number(product.maxAmount)) {
-      throw new BadRequestException(
-        `Amount must be between ${product.minAmount} and ${product.maxAmount}`,
-      );
-    }
-    if (dto.tenureMonths < product.minTenureMonths || dto.tenureMonths > product.maxTenureMonths) {
-      throw new BadRequestException(
-        `Tenure must be between ${product.minTenureMonths} and ${product.maxTenureMonths} months`,
-      );
-    }
-
-    const { monthlyPayment, totalRepayable, schedule } = calculateLoanSchedule(
-      amount,
-      Number(product.interestRate),
-      dto.tenureMonths,
-    );
-
-    const loan = await this.prisma.$transaction(async (tx) => {
-      const newLoan = await tx.loan.create({
-        data: {
-          loanNumber: generateLoanNumber(),
-          status: LoanStatus.SUBMITTED,
-          principalAmount: amount,
-          interestRate: product.interestRate,
-          tenureMonths: dto.tenureMonths,
-          monthlyPayment,
-          totalRepayable,
-          outstandingBalance: totalRepayable,
-          purpose: dto.purpose,
-          collateral: dto.collateral,
-          collateralType: dto.collateralType,
-          collateralEstimatedValue: dto.collateralEstimatedValue,
-          collateralPhotoUrl,
-          guarantorName: dto.guarantorName,
-          guarantorPhone: dto.guarantorPhone,
-          customerId,
-          productId: dto.productId,
-          branchId: customer.branchId,
-          submittedAt: new Date(),
-        },
-      });
-
-      await tx.loanApproval.create({
-        data: {
-          loanId: newLoan.id,
-          actorId: customer.registeredById,
-          action: ApprovalAction.SUBMIT,
-          comment: 'Application submitted via customer mobile app',
-        },
-      });
-
-      await tx.loanSchedule.createMany({
-        data: schedule.map((s) => ({ loanId: newLoan.id, ...s })),
-      });
-
-      return newLoan;
+    const { pin: _pin, ...applicationDto } = dto;
+    const loan = await this.loanApplicationService.createApplication({
+      customerId,
+      dto: applicationDto,
+      collateralPhotoUrl,
+      actorId: customer.registeredById,
+      source: 'MOBILE',
     });
 
     return this.getLoan(customerId, loan.id);

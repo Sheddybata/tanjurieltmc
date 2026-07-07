@@ -510,7 +510,7 @@ export class OperationsService {
     if (account?.type === AccountType.MY_PIKIN) {
       if (account.maturityDate && account.maturityDate > new Date()) {
         throw new BadRequestException(
-          `My Pikin account has not reached maturity (${account.maturityDate.toISOString().slice(0, 10)}).`,
+          `Child Savings account has not reached maturity (${account.maturityDate.toISOString().slice(0, 10)}).`,
         );
       }
     }
@@ -652,6 +652,19 @@ export class OperationsService {
         closedAt: closed ? new Date() : loan.closedAt,
       },
     });
+
+    if (closed) {
+      await tx.notification.create({
+        data: {
+          customerId: loan.customerId,
+          title: 'Loan fully repaid',
+          body: `Your loan ${loan.loanNumber} has been fully repaid. Thank you for banking with Tanjuriel.`,
+          type: 'LOAN_CLOSED',
+          entityType: 'Loan',
+          entityId: loanId,
+        },
+      });
+    }
   }
 
   private async approveTransfer(

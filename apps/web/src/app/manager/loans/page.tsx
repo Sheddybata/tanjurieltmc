@@ -5,8 +5,7 @@
 import { useEffect, useState } from 'react';
 
 import Link from 'next/link';
-
-import { FileText } from 'lucide-react';
+import { FileText, Plus } from 'lucide-react';
 
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 
@@ -27,6 +26,7 @@ import { SectionHeading } from '@/components/ui/section-heading';
 import { api } from '@/lib/api';
 
 import { formatCurrency, formatDate } from '@/lib/utils';
+import { primaryMemberAccountNumber } from '@/lib/member-id';
 
 
 
@@ -44,7 +44,12 @@ interface Loan {
 
   monthlyPayment: number;
 
-  customer: { firstName: string; lastName: string; customerNumber: string };
+  customer: {
+    firstName: string;
+    lastName: string;
+    phone: string;
+    accounts?: { accountNumber: string; type: string }[];
+  };
 
   product: { name: string };
 
@@ -124,7 +129,19 @@ export default function LoansPage() {
 
       <PageShell>
 
-        <SectionHeading title="Application register" description="Filter by pipeline stage" />
+        <SectionHeading
+          title="Application register"
+          description="Filter by pipeline stage"
+          action={
+            <Link
+              href="/manager/loans/new"
+              className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
+            >
+              <Plus className="h-4 w-4" />
+              New application
+            </Link>
+          }
+        />
 
         <FilterTabs tabs={FILTER_TABS} active={filter} onChange={setFilter} />
 
@@ -206,7 +223,9 @@ export default function LoansPage() {
 
                         <p className="font-medium text-gray-900">{loan.customer.firstName} {loan.customer.lastName}</p>
 
-                        <p className="text-xs text-gray-400">{loan.customer.customerNumber}</p>
+                        <p className="text-xs font-mono text-gray-400">
+                          {primaryMemberAccountNumber(loan.customer.accounts, loan.customer.phone)}
+                        </p>
 
                       </td>
 

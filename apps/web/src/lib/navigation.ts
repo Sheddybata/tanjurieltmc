@@ -115,6 +115,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: 'Reconciliation', href: '/manager/reconciliation', icon: Scale, roles: [UserRole.MANAGER, UserRole.ADMIN], group: 'operations' },
 
   { label: 'Loan Applications', href: '/manager/loans', icon: FileText, roles: [UserRole.MANAGER, UserRole.ADMIN], group: 'credit' },
+  { label: 'New Loan Application', href: '/manager/loans/new', icon: FileText, roles: [UserRole.MANAGER, UserRole.ADMIN], group: 'credit' },
 
   { label: 'Loan Approvals', href: '/manager/approvals', icon: CheckCircle, roles: [UserRole.MANAGER, UserRole.ADMIN], group: 'credit' },
 

@@ -1,18 +1,28 @@
-import { Controller, Get, Post, Param, Body, Query, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
+import { Controller, Get, Post, Param, Body, Query, UseGuards, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiConsumes } from '@nestjs/swagger';
 import { LoanStatus } from '@tanjuriel/database';
 import { Permission, JwtPayload } from '@tanjuriel/shared';
 import { ManagerService } from './manager.service';
-import { CreateLoanDto, LoanActionDto } from './dto/manager.dto';
+import { LoanOverdueService } from '../loans/loan-overdue.service';
+import { LoanActionDto, ManagerApplyLoanDto, ManagerLoanQuoteDto } from './dto/manager.dto';
 import { JwtAuthGuard, PermissionsGuard } from '../../common/guards/auth.guards';
 import { Permissions, User } from '../../common/decorators/auth.decorators';
+import {
+  collateralPhotoFilter,
+  collateralPhotoPublicPath,
+  collateralPhotoStorage,
+} from '../../common/utils/collateral-upload.util';
 
 @ApiTags('Manager')
 @Controller('manager')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @ApiBearerAuth()
 export class ManagerController {
-  constructor(private managerService: ManagerService) {}
+  constructor(
+    private managerService: ManagerService,
+    private loanOverdueService: LoanOverdueService,
+  ) {}
 
   @Get('loan-products')
   @Permissions(Permission.VIEW_LOANS)
@@ -22,11 +32,52 @@ export class ManagerController {
     return { success: true, data: products };
   }
 
+  @Get('customers')
+  @Permissions(Permission.CREATE_LOAN)
+  @ApiOperation({ summary: 'List customers for loan application' })
+  async listCustomers(
+    @Query('query') query?: string,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+  ) {
+    const result = await this.managerService.listCustomers(query, Number(page) || 1, Number(limit) || 100);
+    return { success: true, ...result };
+  }
+
+  @Get('customers/:id')
+  @Permissions(Permission.CREATE_LOAN)
+  @ApiOperation({ summary: 'Get customer profile for loan prefill' })
+  async getCustomer(@Param('id') id: string) {
+    const data = await this.managerService.getCustomerForLoan(id);
+    return { success: true, data };
+  }
+
+  @Post('loans/quote')
+  @Permissions(Permission.CREATE_LOAN)
+  @ApiOperation({ summary: 'Preview loan fees and repayment schedule' })
+  async quoteLoan(@Body() dto: ManagerLoanQuoteDto) {
+    const data = await this.managerService.quoteLoan(dto);
+    return { success: true, data };
+  }
+
   @Post('loans')
   @Permissions(Permission.CREATE_LOAN)
-  @ApiOperation({ summary: 'Create and submit a loan application' })
-  async createLoan(@Body() dto: CreateLoanDto, @User() user: JwtPayload) {
-    const loan = await this.managerService.createLoanApplication(dto, user);
+  @ApiOperation({ summary: 'Create and submit a loan application (same fields as mobile)' })
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(
+    FileInterceptor('collateralPhoto', {
+      storage: collateralPhotoStorage,
+      fileFilter: collateralPhotoFilter,
+      limits: { fileSize: 5 * 1024 * 1024 },
+    }),
+  )
+  async createLoan(
+    @Body() dto: ManagerApplyLoanDto,
+    @User() user: JwtPayload,
+    @UploadedFile() collateralPhoto?: Express.Multer.File,
+  ) {
+    const photoUrl = collateralPhoto ? collateralPhotoPublicPath(collateralPhoto.filename) : undefined;
+    const loan = await this.managerService.createLoanApplication(dto, user, photoUrl);
     return { success: true, data: loan };
   }
 
@@ -38,6 +89,7 @@ export class ManagerController {
     @Query('page') page?: number,
     @Query('limit') limit?: number,
   ) {
+    await this.loanOverdueService.syncOverdueLoans();
     const result = await this.managerService.getLoans(status, Number(page) || 1, Number(limit) || 20);
     return { success: true, ...result };
   }

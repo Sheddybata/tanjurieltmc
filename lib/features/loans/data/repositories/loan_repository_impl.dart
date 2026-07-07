@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 import 'package:tanjuriel_microfinance/core/network/api_client.dart';
 import 'package:tanjuriel_microfinance/features/loans/domain/repositories/loan_repository.dart';
@@ -33,30 +35,34 @@ class LoanRepositoryImpl implements LoanRepository {
   }
 
   @override
-  Future<LoanModel> apply({
-    required String productId,
+  Future<Map<String, dynamic>> quote({
     required double principalAmount,
-    required int tenureMonths,
-    String? purpose,
+    required int tenurePeriods,
+    required String repaymentPlan,
+  }) async {
+    final response = await _api.post<Map<String, dynamic>>('/customer/loans/quote', data: {
+      'principalAmount': principalAmount,
+      'tenurePeriods': tenurePeriods,
+      'repaymentPlan': repaymentPlan,
+    });
+    return Map<String, dynamic>.from(response.data?['data'] as Map? ?? {});
+  }
+
+  @override
+  Future<LoanModel> apply({
+    required Map<String, dynamic> fields,
     required String pin,
-    String? collateral,
-    String? collateralType,
-    double? collateralEstimatedValue,
-    String? guarantorName,
-    String? guarantorPhone,
     String? collateralPhotoPath,
   }) async {
     final form = FormData.fromMap({
-      'productId': productId,
-      'principalAmount': principalAmount,
-      'tenureMonths': tenureMonths,
-      if (purpose != null && purpose.isNotEmpty) 'purpose': purpose,
+      ...fields.map((key, value) {
+        if (key == 'businessActivities' && value is List) {
+          return MapEntry(key, jsonEncode(value));
+        }
+        return MapEntry(key, value as Object);
+      }),
       'pin': pin,
-      if (collateral != null) 'collateral': collateral,
-      if (collateralType != null) 'collateralType': collateralType,
-      if (collateralEstimatedValue != null) 'collateralEstimatedValue': collateralEstimatedValue,
-      if (guarantorName != null) 'guarantorName': guarantorName,
-      if (guarantorPhone != null) 'guarantorPhone': guarantorPhone,
+      'contractAccepted': 'true',
     });
 
     if (collateralPhotoPath != null) {

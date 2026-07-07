@@ -3,13 +3,11 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
-import { ApprovalAction, LoanStatus, TransactionStatus, TransactionType } from '@tanjuriel/database';
+import { ApprovalAction, LoanStatus, TransactionStatus, TransactionType, AccountStatus } from '@tanjuriel/database';
 import { JwtPayload, PortfolioSummary } from '@tanjuriel/shared';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import {
-  generateLoanNumber,
   generateTransactionRef,
-  calculateLoanSchedule,
   paginate,
   paginationMeta,
 } from '../../common/utils/reference.util';
@@ -21,66 +19,97 @@ import {
   formatKoboAsDecimal,
   parseMoneyToKobo,
 } from '../../common/utils/money.util';
-import { CreateLoanDto, LoanActionDto } from './dto/manager.dto';
+import { LoanApplicationService } from '../loans/loan-application.service';
+import { LoanActionDto, ManagerApplyLoanDto, ManagerLoanQuoteDto } from './dto/manager.dto';
 
 @Injectable()
 export class ManagerService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private loanApplicationService: LoanApplicationService,
+  ) {}
 
-  async createLoanApplication(dto: CreateLoanDto, user: JwtPayload) {
-    const [customer, product] = await Promise.all([
-      this.prisma.customer.findUnique({ where: { id: dto.customerId } }),
-      this.prisma.loanProduct.findUnique({ where: { id: dto.productId } }),
+  quoteLoan(dto: ManagerLoanQuoteDto) {
+    return this.loanApplicationService.quoteLoan(dto);
+  }
+
+  async listCustomers(query?: string, page = 1, limit = 100) {
+    const { skip, take, page: p, limit: l } = paginate(page, limit);
+    const where = query?.trim()
+      ? {
+          OR: [
+            { firstName: { contains: query.trim(), mode: 'insensitive' as const } },
+            { lastName: { contains: query.trim(), mode: 'insensitive' as const } },
+            { phone: { contains: query.trim() } },
+            { customerNumber: { contains: query.trim(), mode: 'insensitive' as const } },
+          ],
+        }
+      : {};
+
+    const [customers, total] = await Promise.all([
+      this.prisma.customer.findMany({
+        where,
+        skip,
+        take,
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          phone: true,
+          gender: true,
+          dateOfBirth: true,
+          address: true,
+          city: true,
+          state: true,
+          occupation: true,
+          accounts: {
+            where: { status: AccountStatus.ACTIVE },
+            select: { accountNumber: true, type: true },
+            orderBy: { createdAt: 'asc' },
+          },
+        },
+      }),
+      this.prisma.customer.count({ where }),
     ]);
 
-    if (!customer) throw new NotFoundException('Customer not found');
-    if (!product || !product.isActive) throw new NotFoundException('Loan product not found');
+    return { data: customers, meta: paginationMeta(total, p, l) };
+  }
 
-    const amount = dto.principalAmount;
-    if (amount < Number(product.minAmount) || amount > Number(product.maxAmount)) {
-      throw new BadRequestException(`Amount must be between ${product.minAmount} and ${product.maxAmount}`);
-    }
-    if (dto.tenureMonths < product.minTenureMonths || dto.tenureMonths > product.maxTenureMonths) {
-      throw new BadRequestException(`Tenure must be between ${product.minTenureMonths} and ${product.maxTenureMonths} months`);
-    }
-
-    const { monthlyPayment, totalRepayable, schedule } = calculateLoanSchedule(
-      amount,
-      Number(product.interestRate),
-      dto.tenureMonths,
-    );
-
-    const loan = await this.prisma.$transaction(async (tx) => {
-      const newLoan = await tx.loan.create({
-        data: {
-          loanNumber: generateLoanNumber(),
-          status: LoanStatus.SUBMITTED,
-          principalAmount: amount,
-          interestRate: product.interestRate,
-          tenureMonths: dto.tenureMonths,
-          monthlyPayment,
-          totalRepayable,
-          outstandingBalance: totalRepayable,
-          purpose: dto.purpose,
-          collateral: dto.collateral,
-          customerId: dto.customerId,
-          productId: dto.productId,
-          branchId: customer.branchId,
-          submittedAt: new Date(),
+  async getCustomerForLoan(id: string) {
+    const customer = await this.prisma.customer.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        phone: true,
+        gender: true,
+        dateOfBirth: true,
+        address: true,
+        city: true,
+        state: true,
+        occupation: true,
+        accounts: {
+          where: { status: AccountStatus.ACTIVE },
+          select: { accountNumber: true, type: true },
+          orderBy: { createdAt: 'asc' },
         },
-      });
-
-      await tx.loanApproval.create({
-        data: { loanId: newLoan.id, actorId: user.sub, action: ApprovalAction.SUBMIT, comment: 'Application submitted' },
-      });
-
-      await tx.loanSchedule.createMany({
-        data: schedule.map((s) => ({ loanId: newLoan.id, ...s })),
-      });
-
-      return newLoan;
+      },
     });
+    if (!customer) throw new NotFoundException('Customer not found');
+    return customer;
+  }
 
+  async createLoanApplication(dto: ManagerApplyLoanDto, user: JwtPayload, collateralPhotoUrl?: string) {
+    const { customerId, ...applicationDto } = dto;
+    const loan = await this.loanApplicationService.createApplication({
+      customerId,
+      dto: applicationDto,
+      collateralPhotoUrl,
+      actorId: user.sub,
+      source: 'BRANCH',
+    });
     return this.getLoan(loan.id);
   }
 
@@ -95,7 +124,18 @@ export class ManagerService {
         take,
         orderBy: { createdAt: 'desc' },
         include: {
-          customer: { select: { firstName: true, lastName: true, customerNumber: true, phone: true } },
+          customer: {
+            select: {
+              firstName: true,
+              lastName: true,
+              phone: true,
+              accounts: {
+                where: { status: AccountStatus.ACTIVE },
+                orderBy: { createdAt: 'asc' },
+                select: { accountNumber: true, type: true },
+              },
+            },
+          },
           product: { select: { name: true, code: true } },
           approvals: {
             include: { actor: { select: { firstName: true, lastName: true, role: true } } },
@@ -113,7 +153,15 @@ export class ManagerService {
     const loan = await this.prisma.loan.findUnique({
       where: { id },
       include: {
-        customer: true,
+        customer: {
+          include: {
+            accounts: {
+              where: { status: AccountStatus.ACTIVE },
+              orderBy: { createdAt: 'asc' },
+              select: { accountNumber: true, type: true },
+            },
+          },
+        },
         product: true,
         schedules: { orderBy: { installmentNumber: 'asc' } },
         approvals: {

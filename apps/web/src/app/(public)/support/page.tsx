@@ -14,7 +14,7 @@ export default function SupportPage() {
       <PageHero
         eyebrow="Help centre"
         title="How can we help?"
-        description="Find answers about Daily Savings, My Pikin, loans, and the mobile app."
+        description="Find answers about Daily Savings, Child Savings, loans, and the mobile app."
         compact
       />
 

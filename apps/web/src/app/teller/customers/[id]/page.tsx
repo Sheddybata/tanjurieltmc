@@ -12,18 +12,47 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { api } from '@/lib/api';
 import { accountTypeLabel } from '@/lib/account-types';
+import { contributionFrequencyLabel } from '@/lib/contribution-frequency';
 import { formatCurrency, formatDate } from '@/lib/utils';
+import { primaryMemberAccountNumber } from '@/lib/member-id';
+import { CustomerBioCard } from '@/components/customers/customer-bio-card';
+import { apiAssetUrl } from '@/lib/api-origin';
 import { useToast } from '@/components/ui/toast-provider';
 
 interface CustomerDetail {
   id: string;
   customerNumber: string;
+  title?: string;
   firstName: string;
   lastName: string;
+  middleName?: string;
+  maritalStatus?: string;
+  dateOfBirth?: string;
+  gender?: string;
   phone: string;
+  alternatePhone?: string;
   email?: string;
   bvn?: string;
   nin?: string;
+  address?: string;
+  lga?: string;
+  city?: string;
+  state?: string;
+  employmentStatus?: string;
+  employmentStatusNote?: string;
+  employmentStartDate?: string;
+  incomeBand?: string;
+  occupation?: string;
+  employer?: string;
+  employerPhone?: string;
+  employerEmail?: string;
+  employerAddress?: string;
+  natureOfBusiness?: string;
+  officeNumber?: string;
+  officePhone?: string;
+  officeState?: string;
+  officeLga?: string;
+  photoUrl?: string;
   kycStatus: string;
   appEnabled?: boolean;
   registrationSource?: string;
@@ -37,6 +66,12 @@ interface CustomerDetail {
     balance: number;
     label?: string;
     maturityDate?: string;
+    contributionFrequency?: string;
+    childPhotoUrl?: string;
+    childDateOfBirth?: string;
+    childSchool?: string;
+    fatherName?: string;
+    motherName?: string;
   }[];
   loans: { id: string; loanNumber: string; status: string; outstandingBalance: number }[];
 }
@@ -59,6 +94,7 @@ export default function CustomerDetailPage() {
   const [loading, setLoading] = useState(true);
   const [appPin, setAppPin] = useState('');
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const childSavingsAccounts = customer?.accounts?.filter((a) => a.type === 'MY_PIKIN') ?? [];
 
   useEffect(() => {
     load();
@@ -140,7 +176,7 @@ export default function CustomerDetailPage() {
     <DashboardLayout>
       <Header
         title={`${customer.firstName} ${customer.lastName}`}
-        subtitle={customer.customerNumber}
+        subtitle={primaryMemberAccountNumber(customer.accounts, customer.phone)}
       />
       <PageShell>
         <div className="mb-4">
@@ -148,12 +184,10 @@ export default function CustomerDetailPage() {
         </div>
         <div className="grid gap-6 lg:grid-cols-2">
           <Card className="p-6">
-            <h2 className="mb-4 text-lg font-semibold">Profile</h2>
-            <dl className="space-y-3 text-sm">
-              <div><dt className="text-gray-500">Phone</dt><dd>{customer.phone}</dd></div>
-              <div><dt className="text-gray-500">Email</dt><dd>{customer.email || '—'}</dd></div>
-              <div><dt className="text-gray-500">BVN</dt><dd className="font-mono">{customer.bvn || '—'}</dd></div>
-              <div><dt className="text-gray-500">NIN</dt><dd className="font-mono">{customer.nin || '—'}</dd></div>
+            <h2 className="mb-4 text-lg font-semibold">Member profile</h2>
+            <CustomerBioCard customer={customer} />
+            <dl className="mt-6 space-y-3 border-t border-gray-100 pt-4 text-sm">
+              <div><dt className="text-gray-500">Member ID</dt><dd className="font-mono">{primaryMemberAccountNumber(customer.accounts, customer.phone)}</dd></div>
               <div><dt className="text-gray-500">KYC</dt><dd><StatusBadge status={customer.kycStatus} /></dd></div>
               <div><dt className="text-gray-500">Mobile app</dt><dd>{customer.appEnabled ? 'Enabled' : 'Not enabled'}</dd></div>
               <div><dt className="text-gray-500">Registration</dt><dd>{customer.registrationSource || 'BRANCH'}</dd></div>
@@ -167,11 +201,16 @@ export default function CustomerDetailPage() {
             )}
           </Card>
           <Card className="p-6">
-            <div className="mb-4 flex items-center justify-between">
+            <div className="mb-4 flex items-center justify-between gap-3">
               <h2 className="text-lg font-semibold">Accounts</h2>
-              <Link href={`/teller/accounts/new?customerId=${customer.id}`} className="text-sm text-brand-600 hover:underline">
-                Open account
-              </Link>
+              <div className="flex gap-3">
+                <Link href={`/teller/accounts/new?customerId=${customer.id}`} className="text-sm text-brand-600 hover:underline">
+                  Open account
+                </Link>
+                <Link href={`/manager/loans/new?customerId=${customer.id}`} className="text-sm text-brand-600 hover:underline">
+                  New loan application
+                </Link>
+              </div>
             </div>
             {customer.accounts?.length ? (
               <ul className="space-y-3">
@@ -180,12 +219,37 @@ export default function CustomerDetailPage() {
                     <p className="font-mono text-brand-700">{a.accountNumber}</p>
                     <p className="text-sm text-gray-600">
                       {accountTypeLabel(a.type)}
-                      {a.label ? ` · ${a.label}` : ''} · {a.status}
+                      {a.label ? ` · ${a.label}` : ''}
+                      {a.contributionFrequency ? ` · ${contributionFrequencyLabel(a.contributionFrequency)}` : ''} · {a.status}
                     </p>
                     {a.type === 'MY_PIKIN' && a.maturityDate && (
                       <p className="text-xs text-amber-700">Maturity: {formatDate(a.maturityDate)}</p>
                     )}
                     <p className="font-medium">{formatCurrency(Number(a.balance))}</p>
+                    {a.type === 'MY_PIKIN' && (
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        className="mt-2"
+                        loading={actionLoading === `pdf-${a.id}`}
+                        onClick={async () => {
+                          setActionLoading(`pdf-${a.id}`);
+                          try {
+                            await api.downloadPdf(
+                              `/teller/accounts/${a.id}/child-savings/statement.pdf`,
+                              `child-savings-${a.label ?? a.accountNumber}.pdf`,
+                            );
+                            showToast('Statement downloaded', 'success');
+                          } catch (err: unknown) {
+                            showToast((err as { message?: string })?.message || 'Could not download statement', 'error');
+                          } finally {
+                            setActionLoading(null);
+                          }
+                        }}
+                      >
+                        Download statement (PDF)
+                      </Button>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -194,6 +258,37 @@ export default function CustomerDetailPage() {
             )}
           </Card>
         </div>
+
+        {childSavingsAccounts.length > 0 && (
+          <Card className="mt-6 p-6">
+            <h2 className="mb-4 text-lg font-semibold">Child Savings profiles</h2>
+            <div className="grid gap-4 md:grid-cols-2">
+              {childSavingsAccounts.map((a) => {
+                const photoUrl = apiAssetUrl(a.childPhotoUrl);
+                return (
+                  <div key={a.id} className="flex gap-4 rounded-lg border border-amber-100 bg-amber-50/40 p-4">
+                    <div className="h-24 w-24 shrink-0 overflow-hidden rounded-lg bg-gray-100">
+                      {photoUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={photoUrl} alt={a.label ?? 'Child'} className="h-full w-full object-cover" />
+                      ) : (
+                        <div className="flex h-full items-center justify-center text-xs text-gray-400">No photo</div>
+                      )}
+                    </div>
+                    <dl className="space-y-1 text-sm">
+                      <div><dt className="text-gray-500">Child</dt><dd className="font-medium">{a.label ?? '—'}</dd></div>
+                      <div><dt className="text-gray-500">DOB</dt><dd>{a.childDateOfBirth ? formatDate(a.childDateOfBirth) : '—'}</dd></div>
+                      <div><dt className="text-gray-500">School</dt><dd>{a.childSchool ?? '—'}</dd></div>
+                      <div><dt className="text-gray-500">Father</dt><dd>{a.fatherName ?? '—'}</dd></div>
+                      <div><dt className="text-gray-500">Mother</dt><dd>{a.motherName ?? '—'}</dd></div>
+                      <div><dt className="text-gray-500">Maturity</dt><dd>{a.maturityDate ? formatDate(a.maturityDate) : '—'}</dd></div>
+                    </dl>
+                  </div>
+                );
+              })}
+            </div>
+          </Card>
+        )}
 
         <Card className="mt-6 p-6">
           <h2 className="mb-4 text-lg font-semibold">Mobile app access</h2>

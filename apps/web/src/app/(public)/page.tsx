@@ -76,7 +76,7 @@ export default function HomePage() {
                 <p>
                   We saw market women saving small amounts daily, parents putting aside money for their children&apos;s
                   school fees, and small business owners needing working capital without complicated processes. So we built
-                  products like Daily Savings and My Pikin Savings — accounts that match how people actually live and save.
+                  products like Daily Savings and Child Savings — accounts that match how people actually live and save.
                 </p>
                 <p>
                   Today, Tanjuriel combines branch service with a modern mobile app, giving customers the flexibility to
@@ -90,7 +90,7 @@ export default function HomePage() {
               <ul className="mt-6 space-y-4">
                 {[
                   'Daily Savings — save little by little, every day',
-                  'My Pikin Savings — secure savings for your child\'s future',
+                  'Child Savings — secure savings for your child\'s future',
                   'Personal and SME loans with clear terms',
                   'Mobile app for balances, transfers, and bills',
                   'Friendly branch support when you need a person',

@@ -7,12 +7,12 @@ import { SITE, SAVINGS_PRODUCTS } from '@/lib/site-content';
 
 export const metadata: Metadata = {
   title: `Savings | ${SITE.name}`,
-  description: 'Daily Savings and My Pikin Savings — two savings products built for Nigerian families and daily earners.',
+  description: 'Daily Savings and Child Savings — two savings products built for Nigerian families and daily earners.',
 };
 
 const accentIcons = {
   'daily-savings': CalendarHeart,
-  'my-pikin': Baby,
+  'child-savings': Baby,
 };
 
 export default function SavingsPage() {
@@ -65,9 +65,9 @@ export default function SavingsPage() {
                     ))}
                   </ul>
 
-                  {product.id === 'my-pikin' && (
+                  {product.id === 'child-savings' && (
                     <div className="mt-6 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">
-                      My Pikin funds are locked until maturity. Withdrawals are branch-only after maturity, with manager approval.
+                      Child Savings funds are locked until maturity. Withdrawals are branch-only after maturity, with manager approval.
                     </div>
                   )}
 

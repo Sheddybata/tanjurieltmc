@@ -7,7 +7,7 @@ import { SITE, APP_FEATURES } from '@/lib/site-content';
 
 export const metadata: Metadata = {
   title: `Download App | ${SITE.name}`,
-  description: 'Download the Tanjuriel mobile app for Android or iOS — save daily, manage My Pikin accounts, apply for loans, and more.',
+  description: 'Download the Tanjuriel mobile app for Android or iOS — save daily, manage Child Savings accounts, apply for loans, and more.',
 };
 
 export default function AppDownloadPage() {
@@ -16,7 +16,7 @@ export default function AppDownloadPage() {
       <PageHero
         eyebrow="Mobile banking"
         title="Your bank in your pocket"
-        description="Download the Tanjuriel app for Android or iPhone. Daily Savings, My Pikin, loans, transfers, and bills — all in one place."
+        description="Download the Tanjuriel app for Android or iPhone. Daily Savings, Child Savings, loans, transfers, and bills — all in one place."
       />
 
       <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
@@ -33,7 +33,7 @@ export default function AppDownloadPage() {
                       <p className="font-display text-xl font-bold text-white">₦ ••••••</p>
                     </div>
                     <div className="rounded-xl bg-white/20 p-3">
-                      <p className="text-xs text-white/70">My Pikin — Ada</p>
+                      <p className="text-xs text-white/70">Child Savings — Ada</p>
                       <p className="font-display text-xl font-bold text-white">₦ ••••••</p>
                     </div>
                   </div>
@@ -118,7 +118,7 @@ export default function AppDownloadPage() {
           <Smartphone className="mx-auto h-10 w-10 text-brand-600" />
           <h2 className="mt-4 font-display text-2xl font-bold text-gray-900">Prefer to visit a branch?</h2>
           <p className="mt-3 text-gray-600">
-            Our tellers can open Daily Savings or My Pikin accounts for you on the spot.
+            Our tellers can open Daily Savings or Child Savings accounts for you on the spot.
           </p>
           <Link
             href="/contact"

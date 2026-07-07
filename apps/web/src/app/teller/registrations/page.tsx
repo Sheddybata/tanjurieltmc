@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/split-queue-layout';
 import { api } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
+import { primaryMemberAccountNumber } from '@/lib/member-id';
 
 interface PendingCustomer {
   id: string;
@@ -134,7 +135,14 @@ export default function RegistrationsPage() {
                     </div>
 
                     <div className="grid gap-1 sm:grid-cols-2">
-                      <DetailField label="Customer #" value={<span className="font-mono text-xs">{selected.customerNumber}</span>} />
+                      <DetailField
+                        label="Member ID"
+                        value={
+                          <span className="font-mono text-xs">
+                            {primaryMemberAccountNumber(selected.accounts, selected.phone)}
+                          </span>
+                        }
+                      />
                       <DetailField label="Registered" value={selected.createdAt ? formatDate(selected.createdAt) : '—'} />
                       <DetailField label="Email" value={selected.email || '—'} />
                       <DetailField label="Branch" value={selected.branch?.name || 'Head Office – Jos'} />

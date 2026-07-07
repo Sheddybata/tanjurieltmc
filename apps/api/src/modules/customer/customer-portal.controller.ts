@@ -1,30 +1,81 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Response } from 'express';
 import { User } from '../../common/decorators/auth.decorators';
 import { CustomerGuard, JwtAuthGuard } from '../../common/guards/auth.guards';
 import { CustomerJwtPayload } from '@tanjuriel/shared';
+import {
+  childSavingsPhotoFilter,
+  childSavingsPhotoPublicPath,
+  childSavingsPhotoStorage,
+} from '../../common/utils/child-savings-upload.util';
 import {
   collateralPhotoFilter,
   collateralPhotoPublicPath,
   collateralPhotoStorage,
 } from '../../common/utils/collateral-upload.util';
 import { CustomerPortalService } from './customer-portal.service';
+import { ChildSavingsStatementService } from '../child-savings/child-savings-statement.service';
 import { CustomerDepositRequestDto, CustomerTransferRequestDto, CustomerWithdrawalRequestDto } from '../operations/dto/operations.dto';
-import { CustomerApplyLoanDto } from './dto/customer-loan.dto';
+import { CustomerApplyLoanDto, CustomerLoanQuoteDto } from './dto/customer-loan.dto';
+import { CustomerOpenAccountDto } from './dto/customer-open-account.dto';
 import { NameEnquiryDto } from './dto/transfer.dto';
 @ApiTags('Customer App')
 @Controller('customer')
 @UseGuards(JwtAuthGuard, CustomerGuard)
 @ApiBearerAuth()
 export class CustomerPortalController {
-  constructor(private customerPortalService: CustomerPortalService) {}
+  constructor(
+    private customerPortalService: CustomerPortalService,
+    private childSavingsStatementService: ChildSavingsStatementService,
+  ) {}
 
   @Get('me')
   @ApiOperation({ summary: 'Get customer profile and accounts' })
   async profile(@User() user: CustomerJwtPayload) {
     const data = await this.customerPortalService.getProfile(user.customerId);
     return { success: true, data };
+  }
+
+  @Post('accounts')
+  @ApiOperation({ summary: 'Open Daily Savings or Child Savings account on mobile' })
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(
+    FileInterceptor('childPhoto', {
+      storage: childSavingsPhotoStorage,
+      fileFilter: childSavingsPhotoFilter,
+      limits: { fileSize: 5 * 1024 * 1024 },
+    }),
+  )
+  async openAccount(
+    @User() user: CustomerJwtPayload,
+    @Body() dto: CustomerOpenAccountDto,
+    @UploadedFile() childPhoto?: Express.Multer.File,
+  ) {
+    const photoUrl = childPhoto ? childSavingsPhotoPublicPath(childPhoto.filename) : undefined;
+    const data = await this.customerPortalService.openAccount(user.customerId, dto, photoUrl);
+    return { success: true, data };
+  }
+
+  @Get('accounts/:id/child-savings/statement')
+  @ApiOperation({ summary: 'Child Savings approved transaction statement (JSON)' })
+  async childSavingsStatement(@User() user: CustomerJwtPayload, @Param('id') id: string) {
+    const data = await this.childSavingsStatementService.getStatement(id, user.customerId);
+    return { success: true, data };
+  }
+
+  @Get('accounts/:id/child-savings/statement.pdf')
+  @ApiOperation({ summary: 'Download Child Savings statement PDF' })
+  async childSavingsStatementPdf(
+    @User() user: CustomerJwtPayload,
+    @Param('id') id: string,
+    @Res() res: Response,
+  ) {
+    const pdf = await this.childSavingsStatementService.generatePdf(id, user.customerId);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="child-savings-${id}.pdf"`);
+    res.send(pdf);
   }
 
   @Get('settlement-accounts')
@@ -63,7 +114,7 @@ export class CustomerPortalController {
   }
 
   @Post('withdrawal-requests')
-  @ApiOperation({ summary: 'Request My Pikin cash withdrawal after maturity (manager approval required)' })
+  @ApiOperation({ summary: 'Request Child Savings cash withdrawal after maturity (manager approval required)' })
   async withdrawalRequest(@User() user: CustomerJwtPayload, @Body() dto: CustomerWithdrawalRequestDto) {
     const data = await this.customerPortalService.createWithdrawalRequest(user.customerId, dto);
     return { success: true, data };
@@ -155,6 +206,13 @@ export class CustomerPortalController {
       Number(limit) || 20,
     );
     return { success: true, ...result };
+  }
+
+  @Post('loans/quote')
+  @ApiOperation({ summary: 'Preview loan fees and repayment schedule' })
+  async quoteLoan(@Body() dto: CustomerLoanQuoteDto) {
+    const data = await this.customerPortalService.quoteLoan(dto);
+    return { success: true, data };
   }
 
   @Post('loans/apply')

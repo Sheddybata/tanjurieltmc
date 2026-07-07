@@ -1,23 +1,52 @@
-import { Controller, Get, Post, Body, Param, Query, Patch, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
+import { Controller, Get, Post, Body, Param, Query, Patch, UseGuards, UploadedFile, UseInterceptors, Res } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiConsumes } from '@nestjs/swagger';
+import { Response } from 'express';
 import { Permission, JwtPayload } from '@tanjuriel/shared';
 import { TellerService } from './teller.service';
 import { RegisterCustomerDto, OpenAccountDto, TransactionDto, EnableMobileAccessDto, LoanRepaymentDto } from './dto/teller.dto';
 import { JwtAuthGuard, PermissionsGuard } from '../../common/guards/auth.guards';
 import { Permissions, User } from '../../common/decorators/auth.decorators';
+import {
+  childSavingsPhotoFilter,
+  childSavingsPhotoPublicPath,
+  childSavingsPhotoStorage,
+} from '../../common/utils/child-savings-upload.util';
+import {
+  customerPhotoFilter,
+  customerPhotoPublicPath,
+  customerPhotoStorage,
+} from '../../common/utils/customer-photo-upload.util';
+import { ChildSavingsStatementService } from '../child-savings/child-savings-statement.service';
 
 @ApiTags('Teller')
 @Controller('teller')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @ApiBearerAuth()
 export class TellerController {
-  constructor(private tellerService: TellerService) {}
+  constructor(
+    private tellerService: TellerService,
+    private childSavingsStatementService: ChildSavingsStatementService,
+  ) {}
 
   @Post('customers')
   @Permissions(Permission.REGISTER_CUSTOMER)
   @ApiOperation({ summary: 'Register a new customer' })
-  async registerCustomer(@Body() dto: RegisterCustomerDto, @User() user: JwtPayload) {
-    const customer = await this.tellerService.registerCustomer(dto, user);
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(
+    FileInterceptor('customerPhoto', {
+      storage: customerPhotoStorage,
+      fileFilter: customerPhotoFilter,
+      limits: { fileSize: 5 * 1024 * 1024 },
+    }),
+  )
+  async registerCustomer(
+    @Body() dto: RegisterCustomerDto,
+    @User() user: JwtPayload,
+    @UploadedFile() customerPhoto?: Express.Multer.File,
+  ) {
+    const photoUrl = customerPhoto ? customerPhotoPublicPath(customerPhoto.filename) : undefined;
+    const customer = await this.tellerService.registerCustomer(dto, user, photoUrl);
     return { success: true, data: customer };
   }
 
@@ -68,9 +97,40 @@ export class TellerController {
   @Post('accounts')
   @Permissions(Permission.OPEN_ACCOUNT)
   @ApiOperation({ summary: 'Open a new account for a customer' })
-  async openAccount(@Body() dto: OpenAccountDto, @User() user: JwtPayload) {
-    const account = await this.tellerService.openAccount(dto, user);
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(
+    FileInterceptor('childPhoto', {
+      storage: childSavingsPhotoStorage,
+      fileFilter: childSavingsPhotoFilter,
+      limits: { fileSize: 5 * 1024 * 1024 },
+    }),
+  )
+  async openAccount(
+    @Body() dto: OpenAccountDto,
+    @User() user: JwtPayload,
+    @UploadedFile() childPhoto?: Express.Multer.File,
+  ) {
+    const photoUrl = childPhoto ? childSavingsPhotoPublicPath(childPhoto.filename) : undefined;
+    const account = await this.tellerService.openAccount(dto, user, photoUrl);
     return { success: true, data: account };
+  }
+
+  @Get('accounts/:accountId/child-savings/statement')
+  @Permissions(Permission.VIEW_TRANSACTIONS)
+  @ApiOperation({ summary: 'Child Savings statement (JSON)' })
+  async childSavingsStatement(@Param('accountId') accountId: string) {
+    const data = await this.childSavingsStatementService.getStatement(accountId);
+    return { success: true, data };
+  }
+
+  @Get('accounts/:accountId/child-savings/statement.pdf')
+  @Permissions(Permission.VIEW_TRANSACTIONS)
+  @ApiOperation({ summary: 'Download Child Savings statement PDF' })
+  async childSavingsStatementPdf(@Param('accountId') accountId: string, @Res() res: Response) {
+    const pdf = await this.childSavingsStatementService.generatePdf(accountId);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="child-savings-${accountId}.pdf"`);
+    res.send(pdf);
   }
 
   @Post('deposits')

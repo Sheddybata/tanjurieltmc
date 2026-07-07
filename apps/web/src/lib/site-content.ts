@@ -16,7 +16,7 @@ export const SITE = {
 export const NAV = {
   personal: [
     { label: 'Daily Savings', href: '/personal/savings#daily-savings' },
-    { label: 'My Pikin Savings', href: '/personal/savings#my-pikin' },
+    { label: 'Child Savings', href: '/personal/savings#child-savings' },
     { label: 'Loans', href: '/personal/loans' },
   ],
   about: [
@@ -53,20 +53,21 @@ export const SAVINGS_PRODUCTS = [
     accent: 'emerald' as const,
   },
   {
-    id: 'my-pikin',
-    name: 'My Pikin Savings',
-    slug: 'my-pikin',
+    id: 'child-savings',
+    name: 'Child Savings',
+    slug: 'child-savings',
     headline: 'Invest in your child\'s future',
     summary:
       'A dedicated savings account for your child, locked until maturity so their future stays protected.',
     description:
-      'My Pikin Savings lets parents and guardians set aside money for a child\'s education, apprenticeship, or future needs. You choose a maturity date and a label for the account — funds stay locked until then, so the savings truly grow for your pikin.',
+      'Child Savings lets parents and guardians set aside money for a child\'s education, apprenticeship, or future needs. You choose a maturity date and register each child with their photo and details — funds stay locked until then.',
     features: [
       'Named account for each child (e.g. "Ada Eze")',
+      'Child photo and parent details on file',
       'Set a maturity date that fits your goal',
       'Funds locked until maturity — no app transfers or withdrawals',
       'Withdraw at branch after maturity, with manager approval',
-      'Teaches long-term saving for the whole family',
+      'Open multiple Child Savings accounts for different children or goals',
     ],
     idealFor: 'Parents and guardians saving for school fees, skills training, or a child\'s future',
     accent: 'amber' as const,
@@ -144,7 +145,7 @@ export const MISSION_VISION = {
 };
 
 export const APP_FEATURES = [
-  { title: 'Check balances', description: 'View all your accounts including Daily Savings and My Pikin in one place.' },
+  { title: 'Check balances', description: 'View all your accounts including Daily Savings and Child Savings in one place.' },
   { title: 'Save & transfer', description: 'Make deposits, request transfers, and pay bills from your phone.' },
   { title: 'Transaction history', description: 'Full history and receipts for every movement on your account.' },
   { title: 'Loan applications', description: 'Browse loan products and start an application in-app.' },
@@ -158,12 +159,12 @@ export const FAQ = [
     a: 'Visit any Tanjuriel branch with a valid ID, or register through our mobile app and complete KYC. A teller will help you open your Daily Savings account with your first deposit.',
   },
   {
-    q: 'What is My Pikin Savings?',
-    a: 'My Pikin is a child savings account. You name the account after your child and set a maturity date. Before maturity, funds stay locked. After maturity, you can request a withdrawal on the mobile app; a manager must approve before you collect cash at your branch.',
+    q: 'What is Child Savings?',
+    a: 'Child Savings is a dedicated account for your child. You register their name, photo, school, and parent details, and set a maturity date. Before maturity, funds stay locked. After maturity, you can request a withdrawal on the mobile app; a manager must approve before you collect cash at your branch.',
   },
   {
-    q: 'Can I withdraw from My Pikin early?',
-    a: 'My Pikin accounts are designed to stay locked until maturity to protect your child\'s savings. Please speak with a branch manager if you have an exceptional need.',
+    q: 'Can I withdraw from Child Savings early?',
+    a: 'Child Savings accounts are designed to stay locked until maturity to protect your child\'s savings. Please speak with a branch manager if you have an exceptional need.',
   },
   {
     q: 'How do I apply for a loan?',

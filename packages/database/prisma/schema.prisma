@@ -39,6 +39,13 @@ enum AccountStatus {
   CLOSED
 }
 
+enum ContributionFrequency {
+  DAILY
+  WEEKLY
+  BI_WEEKLY
+  MONTHLY
+}
+
 enum TransactionType {
   DEPOSIT
   WITHDRAWAL
@@ -76,6 +83,40 @@ enum CollateralType {
   GUARANTOR
   CASH
   OTHER
+}
+
+enum LocationType {
+  RURAL
+  URBAN
+  SEMI_URBAN
+}
+
+enum EducationLevel {
+  QURANIC
+  PRIMARY
+  JUNIOR_SECONDARY
+  SENIOR_SECONDARY
+  TERTIARY
+}
+
+enum MaritalStatus {
+  MARRIED
+  SINGLE
+  DIVORCED
+  WIDOWED
+  LIVING_WITH_COMPANION
+}
+
+enum LoanCategory {
+  PERSONAL
+  BUSINESS
+  ASSET_FINANCING
+}
+
+enum LoanRepaymentPlan {
+  DAILY
+  WEEKLY
+  MONTHLY
 }
 
 enum RegistrationSource {
@@ -133,6 +174,38 @@ enum Gender {
   MALE
   FEMALE
   OTHER
+}
+
+enum CustomerTitle {
+  MR
+  MRS
+  MS
+  MISS
+  DR
+  CHIEF
+  ENGR
+  BARR
+  OTHER
+}
+
+enum EmploymentStatus {
+  EMPLOYED
+  SELF_EMPLOYED
+  UNEMPLOYED
+  RETIRED
+  STUDENT
+  OTHER
+}
+
+enum IncomeBand {
+  BELOW_50K
+  BAND_51K_250K
+  BAND_251K_500K
+  BAND_501K_1M
+  BAND_1M_5M
+  BAND_5M_10M
+  BAND_10M_20M
+  ABOVE_20M
 }
 
 enum PaymentRequestType {
@@ -234,17 +307,33 @@ model Customer {
   firstName       String
   lastName        String
   middleName      String?
+  title           CustomerTitle?
+  maritalStatus   MaritalStatus?
   dateOfBirth     DateTime
   gender          Gender
   phone           String
+  alternatePhone  String?
   email           String?
   bvn             String?           @unique
   nin             String?           @unique
   address         String
+  lga             String?
   city            String
   state           String
+  employmentStatus     EmploymentStatus?
+  employmentStatusNote String?
+  employmentStartDate  DateTime?
+  incomeBand           IncomeBand?
   occupation      String?
   employer        String?
+  employerPhone   String?
+  employerEmail   String?
+  employerAddress String?
+  natureOfBusiness String?
+  officeNumber    String?
+  officePhone     String?
+  officeState     String?
+  officeLga       String?
   monthlyIncome   Decimal?          @db.Decimal(18, 2)
   kycStatus       CustomerKycStatus @default(PENDING)
   kycVerifiedAt   DateTime?
@@ -284,9 +373,15 @@ model Account {
   heldBalance      Decimal       @default(0) @db.Decimal(18, 2)
   currency         String        @default("NGN")
   interestRate   Decimal?      @db.Decimal(5, 4)
-  label          String?
-  maturityDate   DateTime?
-  customerId     String
+  label                 String?
+  maturityDate          DateTime?
+  contributionFrequency ContributionFrequency?
+  childPhotoUrl         String?
+  childDateOfBirth      DateTime?
+  childSchool           String?
+  fatherName            String?
+  motherName            String?
+  customerId            String
   branchId       String
   openedById     String
   openedAt       DateTime?
@@ -381,6 +476,28 @@ model Loan {
   collateralVerifiedAt DateTime?
   collateralVerifiedById String?
   collateralVerificationNote String?
+  applicantFullName     String?
+  locationType          LocationType?
+  applicantAddress      String?
+  applicantGender       Gender?
+  applicantDateOfBirth  DateTime?
+  educationLevel        EducationLevel?
+  maritalStatus         MaritalStatus?
+  businessActivities    Json?
+  yearsOfExperience     Int?
+  unionName             String?
+  nextOfKinName         String?
+  nextOfKinPhone        String?
+  nextOfKinAddress      String?
+  loanCategory          LoanCategory?
+  repaymentPlan         LoanRepaymentPlan?
+  tenurePeriods         Int?
+  openingFeeAmount      Decimal?   @db.Decimal(18, 2)
+  upfrontFeeAmount      Decimal?   @db.Decimal(18, 2)
+  flatInterestAmount    Decimal?   @db.Decimal(18, 2)
+  installmentAmount     Decimal?   @db.Decimal(18, 2)
+  contractAcceptedAt    DateTime?
+  contractVersion       String?
   customerId        String
   productId         String
   accountId         String?

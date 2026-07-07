@@ -45,12 +45,12 @@ export default function ContactPage() {
         <div className="mt-12 rounded-2xl border border-gray-100 bg-surface-secondary p-8 lg:p-10">
           <h2 className="font-display text-xl font-bold text-gray-900">Opening an account?</h2>
           <p className="mt-3 max-w-2xl text-gray-600">
-            Bring a valid ID to any Tanjuriel branch. Our tellers can open Daily Savings, My Pikin, or other account types
+            Bring a valid ID to any Tanjuriel branch. Our tellers can open Daily Savings, Child Savings, or other account types
             for you. You can also download the mobile app and complete registration from your phone.
           </p>
           <ul className="mt-6 space-y-2 text-sm text-gray-700">
             <li>• Daily Savings — save as often as you like</li>
-            <li>• My Pikin Savings — name the account, set a maturity date for your child</li>
+            <li>• Child Savings — register your child with photo and details, set a maturity date</li>
             <li>• Personal and business loans — ask about eligibility at the branch</li>
           </ul>
         </div>

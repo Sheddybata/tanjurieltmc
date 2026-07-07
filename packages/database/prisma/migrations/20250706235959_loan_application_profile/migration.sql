@@ -1,0 +1,29 @@
+-- Loan application profile + pricing fields
+CREATE TYPE "LocationType" AS ENUM ('RURAL', 'URBAN', 'SEMI_URBAN');
+CREATE TYPE "EducationLevel" AS ENUM ('QURANIC', 'PRIMARY', 'JUNIOR_SECONDARY', 'SENIOR_SECONDARY', 'TERTIARY');
+CREATE TYPE "MaritalStatus" AS ENUM ('MARRIED', 'SINGLE', 'DIVORCED', 'WIDOWED', 'LIVING_WITH_COMPANION');
+CREATE TYPE "LoanCategory" AS ENUM ('PERSONAL', 'BUSINESS', 'ASSET_FINANCING');
+CREATE TYPE "LoanRepaymentPlan" AS ENUM ('DAILY', 'WEEKLY', 'MONTHLY');
+
+ALTER TABLE "loans" ADD COLUMN IF NOT EXISTS "applicantFullName" TEXT;
+ALTER TABLE "loans" ADD COLUMN IF NOT EXISTS "locationType" "LocationType";
+ALTER TABLE "loans" ADD COLUMN IF NOT EXISTS "applicantAddress" TEXT;
+ALTER TABLE "loans" ADD COLUMN IF NOT EXISTS "applicantGender" "Gender";
+ALTER TABLE "loans" ADD COLUMN IF NOT EXISTS "applicantDateOfBirth" TIMESTAMP(3);
+ALTER TABLE "loans" ADD COLUMN IF NOT EXISTS "educationLevel" "EducationLevel";
+ALTER TABLE "loans" ADD COLUMN IF NOT EXISTS "maritalStatus" "MaritalStatus";
+ALTER TABLE "loans" ADD COLUMN IF NOT EXISTS "businessActivities" JSONB;
+ALTER TABLE "loans" ADD COLUMN IF NOT EXISTS "yearsOfExperience" INTEGER;
+ALTER TABLE "loans" ADD COLUMN IF NOT EXISTS "unionName" TEXT;
+ALTER TABLE "loans" ADD COLUMN IF NOT EXISTS "nextOfKinName" TEXT;
+ALTER TABLE "loans" ADD COLUMN IF NOT EXISTS "nextOfKinPhone" TEXT;
+ALTER TABLE "loans" ADD COLUMN IF NOT EXISTS "nextOfKinAddress" TEXT;
+ALTER TABLE "loans" ADD COLUMN IF NOT EXISTS "loanCategory" "LoanCategory";
+ALTER TABLE "loans" ADD COLUMN IF NOT EXISTS "repaymentPlan" "LoanRepaymentPlan";
+ALTER TABLE "loans" ADD COLUMN IF NOT EXISTS "tenurePeriods" INTEGER;
+ALTER TABLE "loans" ADD COLUMN IF NOT EXISTS "openingFeeAmount" DECIMAL(18,2);
+ALTER TABLE "loans" ADD COLUMN IF NOT EXISTS "upfrontFeeAmount" DECIMAL(18,2);
+ALTER TABLE "loans" ADD COLUMN IF NOT EXISTS "flatInterestAmount" DECIMAL(18,2);
+ALTER TABLE "loans" ADD COLUMN IF NOT EXISTS "installmentAmount" DECIMAL(18,2);
+ALTER TABLE "loans" ADD COLUMN IF NOT EXISTS "contractAcceptedAt" TIMESTAMP(3);
+ALTER TABLE "loans" ADD COLUMN IF NOT EXISTS "contractVersion" TEXT;

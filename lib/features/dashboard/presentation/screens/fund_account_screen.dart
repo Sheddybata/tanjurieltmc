@@ -139,7 +139,7 @@ class _FundAccountScreenState extends ConsumerState<FundAccountScreen> {
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
                   ),
                   const SizedBox(height: 24),
-                  if (user?.paymentRef != null && user!.paymentRef!.isNotEmpty) ...[
+                  if (user?.accountNumber != null && user!.accountNumber.isNotEmpty) ...[
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.all(16),
@@ -151,26 +151,27 @@ class _FundAccountScreenState extends ConsumerState<FundAccountScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Your payment reference', style: Theme.of(context).textTheme.labelLarge),
+                          Text('Your member ID', style: Theme.of(context).textTheme.labelLarge),
                           const SizedBox(height: 8),
                           Row(
                             children: [
                               Expanded(
                                 child: Text(
-                                  user.paymentRef!,
+                                  user.accountNumber,
                                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                                         fontWeight: FontWeight.bold,
                                         color: AppColors.primary,
+                                        fontFamily: 'monospace',
                                       ),
                                 ),
                               ),
                               IconButton(
-                                onPressed: () => _copy(user.paymentRef!, 'Reference'),
+                                onPressed: () => _copy(user.accountNumber, 'Member ID'),
                                 icon: const Icon(Icons.copy),
                               ),
                             ],
                           ),
-                          const Text('Include this reference in your transfer narration'),
+                          const Text('Include this 10-digit number in your transfer narration'),
                         ],
                       ),
                     ),

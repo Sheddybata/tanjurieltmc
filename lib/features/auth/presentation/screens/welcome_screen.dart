@@ -64,13 +64,13 @@ class WelcomeScreen extends StatelessWidget {
               const Spacer(),
               AppButton(
                 label: 'Sign In',
-                onPressed: () => context.go(RouteNames.login),
+                onPressed: () => context.push(RouteNames.login),
               ),
               const SizedBox(height: 12),
               AppButton(
                 label: 'Create account',
                 variant: AppButtonVariant.outline,
-                onPressed: () => context.go(RouteNames.register),
+                onPressed: () => context.push(RouteNames.register),
               ),
               const SizedBox(height: 16),
             ],

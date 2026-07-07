@@ -1,37 +1,18 @@
-import { IsNumber, IsOptional, IsString, Min, IsEnum } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsOptional, IsString, IsEnum } from 'class-validator';
+import { ApiPropertyOptional, OmitType } from '@nestjs/swagger';
 import { LoanStatus } from '@tanjuriel/database';
 import { IsEntityId } from '../../../common/validators/entity-id.decorator';
+import { CustomerApplyLoanDto } from '../../customer/dto/customer-loan.dto';
 
-export class CreateLoanDto {
-  @ApiProperty()
+export class ManagerApplyLoanDto extends OmitType(CustomerApplyLoanDto, ['pin'] as const) {
   @IsEntityId()
   customerId: string;
-
-  @ApiProperty()
-  @IsEntityId()
-  productId: string;
-
-  @ApiProperty()
-  @IsNumber()
-  @Min(1)
-  principalAmount: number;
-
-  @ApiProperty()
-  @IsNumber()
-  @Min(1)
-  tenureMonths: number;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
-  purpose?: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
-  collateral?: string;
 }
+
+export { CustomerLoanQuoteDto as ManagerLoanQuoteDto } from '../../customer/dto/customer-loan.dto';
+
+/** @deprecated Use ManagerApplyLoanDto */
+export type CreateLoanDto = ManagerApplyLoanDto;
 
 export class LoanActionDto {
   @ApiPropertyOptional()

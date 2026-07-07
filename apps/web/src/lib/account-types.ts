@@ -1,7 +1,7 @@
 export const ACCOUNT_TYPE_LABELS: Record<string, string> = {
   SAVINGS: 'Savings',
   DAILY_SAVINGS: 'Daily Savings',
-  MY_PIKIN: 'My Pikin Savings',
+  MY_PIKIN: 'Child Savings',
   CURRENT: 'Current',
   FIXED_DEPOSIT: 'Fixed Deposit',
 };
@@ -10,7 +10,7 @@ export const ACCOUNT_TYPE_LABELS: Record<string, string> = {
 export const TELLER_OPEN_ACCOUNT_TYPES = [
   { value: 'SAVINGS', label: 'Savings Account' },
   { value: 'DAILY_SAVINGS', label: 'Daily Savings' },
-  { value: 'MY_PIKIN', label: 'My Pikin Savings' },
+  { value: 'MY_PIKIN', label: 'Child Savings' },
 ] as const;
 
 export function accountTypeLabel(type: string): string {

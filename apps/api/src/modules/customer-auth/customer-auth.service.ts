@@ -17,8 +17,8 @@ export class CustomerAuthService {
     private config: ConfigService,
   ) {}
 
-  async register(dto: CustomerRegisterDto) {
-    return registerMobileCustomer(this.prisma, this, dto);
+  async register(dto: CustomerRegisterDto, photoUrl?: string) {
+    return registerMobileCustomer(this.prisma, this, dto, photoUrl);
   }
 
   async login(dto: CustomerLoginDto): Promise<AuthTokens & { customer: object }> {

@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { api } from '@/lib/api';
 import { useToast } from '@/components/ui/toast-provider';
 import { formatCurrency, formatMoneyForApi } from '@/lib/utils';
+import { primaryMemberAccountNumber } from '@/lib/member-id';
 
 interface CustomerLoan {
   id: string;
@@ -22,7 +23,8 @@ interface CustomerDetail {
   id: string;
   firstName: string;
   lastName: string;
-  customerNumber: string;
+  phone: string;
+  accounts?: { accountNumber: string; type: string }[];
   loans: CustomerLoan[];
 }
 
@@ -38,7 +40,7 @@ export default function LoanRepaymentsPage() {
 
   async function searchCustomer() {
     if (!query.trim()) {
-      showToast('Enter customer number, phone, or name', 'error');
+      showToast('Enter account number, phone, or name', 'error');
       return;
     }
     setSearching(true);
@@ -107,7 +109,7 @@ export default function LoanRepaymentsPage() {
           <div className="mb-6 space-y-3">
             <Input
               label="Find customer"
-              placeholder="Phone, customer number, or name"
+              placeholder="Account number, phone, or name"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
@@ -118,7 +120,7 @@ export default function LoanRepaymentsPage() {
 
           {customer && (
             <p className="mb-4 text-sm text-gray-700">
-              {customer.firstName} {customer.lastName} · {customer.customerNumber}
+              {customer.firstName} {customer.lastName} · {primaryMemberAccountNumber(customer.accounts, customer.phone)}
             </p>
           )}
 

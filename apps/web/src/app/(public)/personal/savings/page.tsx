@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { CalendarHeart, Baby, Check, ArrowRight, Smartphone } from 'lucide-react';
+import { ArrowRight, Smartphone } from 'lucide-react';
 import { PageHero } from '@/components/public/page-hero';
 import { SavingsProductCard } from '@/components/public/savings-product-card';
 import { SITE, SAVINGS_PRODUCTS } from '@/lib/site-content';
@@ -8,11 +8,6 @@ import { SITE, SAVINGS_PRODUCTS } from '@/lib/site-content';
 export const metadata: Metadata = {
   title: `Savings | ${SITE.name}`,
   description: 'Daily Savings and Child Savings — two savings products built for Nigerian families and daily earners.',
-};
-
-const accentIcons = {
-  'daily-savings': CalendarHeart,
-  'child-savings': Baby,
 };
 
 export default function SavingsPage() {
@@ -32,58 +27,7 @@ export default function SavingsPage() {
         </div>
       </section>
 
-      {SAVINGS_PRODUCTS.map((product) => {
-        const Icon = accentIcons[product.id as keyof typeof accentIcons] ?? CalendarHeart;
-        return (
-          <section
-            key={product.id}
-            id={product.id}
-            className="scroll-mt-24 border-t border-gray-100 bg-surface-secondary py-16"
-          >
-            <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-              <div className="grid gap-10 lg:grid-cols-2 lg:items-start">
-                <div>
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-100">
-                    <Icon className="h-6 w-6 text-brand-700" />
-                  </div>
-                  <h2 className="mt-5 font-display text-3xl font-bold text-gray-900">{product.name}</h2>
-                  <p className="mt-2 text-lg font-medium text-brand-600">{product.headline}</p>
-                  <p className="mt-4 leading-relaxed text-gray-600">{product.description}</p>
-                  <p className="mt-4 text-sm text-gray-500">
-                    <span className="font-semibold text-gray-700">Best for:</span> {product.idealFor}
-                  </p>
-                </div>
-
-                <div className="rounded-2xl border border-gray-100 bg-white p-8 shadow-card">
-                  <h3 className="font-display text-lg font-bold text-gray-900">What you get</h3>
-                  <ul className="mt-6 space-y-3">
-                    {product.features.map((feature) => (
-                      <li key={feature} className="flex items-start gap-3 text-sm text-gray-700">
-                        <Check className="mt-0.5 h-4 w-4 shrink-0 text-brand-500" />
-                        {feature}
-                      </li>
-                    ))}
-                  </ul>
-
-                  {product.id === 'child-savings' && (
-                    <div className="mt-6 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">
-                      Child Savings funds are locked until maturity. Withdrawals are branch-only after maturity, with manager approval.
-                    </div>
-                  )}
-
-                  {product.id === 'daily-savings' && (
-                    <div className="mt-6 rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-                      Transfers and withdrawals require manager approval — keeping your savings secure.
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </section>
-        );
-      })}
-
-      <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+      <section className="mx-auto max-w-7xl px-4 pb-20 sm:px-6 lg:px-8">
         <div className="rounded-2xl bg-brand-950 px-8 py-10 text-center lg:px-14">
           <Smartphone className="mx-auto h-10 w-10 text-brand-300" />
           <h2 className="mt-4 font-display text-2xl font-bold text-white">Ready to start saving?</h2>

@@ -3,6 +3,8 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { UserRole, UserStatus } from '@tanjuriel/database';
 import { IsEntityId } from '../../../common/validators/entity-id.decorator';
 
+const STAFF_ROLES = [UserRole.TELLER, UserRole.MANAGER] as const;
+
 export class CreateUserDto {
   @ApiProperty()
   @IsString()
@@ -30,7 +32,7 @@ export class CreateUserDto {
   @IsString()
   phone?: string;
 
-  @ApiProperty({ enum: UserRole })
+  @ApiProperty({ enum: STAFF_ROLES })
   @IsEnum(UserRole)
   role: UserRole;
 
@@ -61,13 +63,20 @@ export class UpdateUserDto {
   @IsEnum(UserRole)
   role?: UserRole;
 
-  @ApiPropertyOptional({ enum: UserStatus })
-  @IsOptional()
-  @IsEnum(UserStatus)
-  status?: UserStatus;
-
   @ApiPropertyOptional()
   @IsOptional()
   @IsEntityId()
   branchId?: string;
+
+  @ApiPropertyOptional({ enum: UserStatus })
+  @IsOptional()
+  @IsEnum(UserStatus)
+  status?: UserStatus;
+}
+
+export class ResetUserPasswordDto {
+  @ApiProperty()
+  @IsString()
+  @MinLength(8)
+  password: string;
 }

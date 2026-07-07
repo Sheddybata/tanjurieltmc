@@ -69,6 +69,7 @@ export interface CreateTransferRequestInput {
   beneficiaryName: string;
   narration?: string;
   customerId: string;
+  initiatedByStaffId?: string;
 }
 
 export interface CreateLoanRepaymentRequestInput {
@@ -197,6 +198,7 @@ export class OperationsService {
           beneficiaryAccount: input.beneficiaryAccount,
           beneficiaryName: input.beneficiaryName,
           narration: input.narration || 'Transfer request',
+          initiatedByStaffId: input.initiatedByStaffId,
         },
         include: this.requestIncludes(),
       });
@@ -386,6 +388,14 @@ export class OperationsService {
       request.id,
     );
 
+    await this.notifyInitiatingStaff(
+      request.initiatedByStaffId,
+      'Request declined',
+      `${request.type} ${request.reference} was declined.`,
+      `${request.type.toLowerCase()}_rejected`,
+      request.id,
+    );
+
     return updated;
   }
 
@@ -435,7 +445,7 @@ export class OperationsService {
   ) {
     const amountKobo = parseMoneyToKobo(request.amount);
 
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       const account = await tx.account.findUnique({ where: { id: request.accountId } });
       if (!account) throw new NotFoundException('Account not found');
 
@@ -498,6 +508,16 @@ export class OperationsService {
 
       return { request: updated, transaction };
     });
+
+    await this.notifyInitiatingStaff(
+      request.initiatedByStaffId,
+      'Deposit approved',
+      `Deposit ${request.reference} was approved.`,
+      'deposit_approved',
+      request.id,
+    );
+
+    return result;
   }
 
   private async approveWithdrawal(
@@ -689,7 +709,7 @@ export class OperationsService {
   ) {
     const amountKobo = parseMoneyToKobo(request.amount);
 
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       const account = await tx.account.findUnique({ where: { id: request.accountId } });
       if (!account) throw new NotFoundException('Account not found');
 
@@ -772,6 +792,16 @@ export class OperationsService {
 
       return { request: updated, transaction };
     });
+
+    await this.notifyInitiatingStaff(
+      request.initiatedByStaffId,
+      type === TransactionType.TRANSFER ? 'Transfer approved' : 'Withdrawal approved',
+      `${type} ${request.reference} was approved.`,
+      `${type.toLowerCase()}_approved`,
+      request.id,
+    );
+
+    return result;
   }
 
   private async getActiveAccount(accountId: string) {
@@ -887,6 +917,19 @@ export class OperationsService {
   ) {
     await tx.notification.create({
       data: { customerId, title, body, type, entityType, entityId },
+    });
+  }
+
+  private async notifyInitiatingStaff(
+    staffId: string | null | undefined,
+    title: string,
+    body: string,
+    type: string,
+    entityId: string,
+  ) {
+    if (!staffId) return;
+    await this.prisma.notification.create({
+      data: { userId: staffId, title, body, type, entityType: 'PaymentRequest', entityId },
     });
   }
 

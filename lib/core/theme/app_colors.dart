@@ -4,7 +4,7 @@ abstract final class AppColors {
   static const Color primary = Color(0xFF0B5B3B);
   static const Color primaryDark = Color(0xFF084A30);
   static const Color primaryLight = Color(0xFF1A7A52);
-  static const Color secondary = Color(0xFFD4A843);
+  static const Color secondary = Color(0xFF8A5832);
   static const Color accent = Color(0xFF2DD4A8);
 
   static const Color background = Color(0xFFF5F7F6);

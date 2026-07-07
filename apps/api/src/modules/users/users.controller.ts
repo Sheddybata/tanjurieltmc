@@ -2,7 +2,7 @@ import { Controller, Get, Post, Patch, Param, Body, Query, UseGuards } from '@ne
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { Permission } from '@tanjuriel/shared';
 import { UsersService } from './users.service';
-import { CreateUserDto, UpdateUserDto } from './dto/users.dto';
+import { CreateUserDto, UpdateUserDto, ResetUserPasswordDto } from './dto/users.dto';
 import { JwtAuthGuard, PermissionsGuard } from '../../common/guards/auth.guards';
 import { Permissions } from '../../common/decorators/auth.decorators';
 
@@ -39,6 +39,14 @@ export class UsersController {
   async findOne(@Param('id') id: string) {
     const user = await this.usersService.findOne(id);
     return { success: true, data: user };
+  }
+
+  @Patch(':id/password')
+  @Permissions(Permission.MANAGE_USERS)
+  @ApiOperation({ summary: 'Reset user password (admin)' })
+  async resetPassword(@Param('id') id: string, @Body() dto: ResetUserPasswordDto) {
+    const result = await this.usersService.resetPassword(id, dto.password);
+    return { success: true, ...result };
   }
 
   @Patch(':id')

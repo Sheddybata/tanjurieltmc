@@ -100,11 +100,13 @@ export const NAV_ITEMS: NavItem[] = [
 
   { label: 'Mobile Registrations', href: '/teller/registrations', icon: ClipboardList, roles: [UserRole.TELLER], group: 'teller' },
 
-  { label: 'Customers', href: '/teller/customers', icon: Users, roles: [UserRole.TELLER], group: 'teller' },
+  { label: 'Customers', href: '/teller/customers', icon: Users, roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.TELLER], group: 'teller' },
 
-  { label: 'Open Account', href: '/teller/accounts/new', icon: Wallet, roles: [UserRole.TELLER], group: 'teller' },
+  { label: 'Open Account', href: '/teller/accounts/new', icon: Wallet, roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.TELLER], group: 'teller' },
 
   { label: 'Deposits', href: '/teller/deposits', icon: ArrowDownLeft, roles: [UserRole.TELLER], group: 'teller' },
+  { label: 'Fund Child Savings', href: '/teller/child-savings/fund', icon: Wallet, roles: [UserRole.TELLER], group: 'teller' },
+  { label: 'Transfer (on behalf)', href: '/teller/transfers', icon: ArrowUpRight, roles: [UserRole.TELLER], group: 'teller' },
 
   { label: 'Withdrawals', href: '/teller/withdrawals', icon: ArrowUpRight, roles: [UserRole.TELLER], group: 'teller' },
 

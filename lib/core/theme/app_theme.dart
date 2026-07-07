@@ -18,7 +18,7 @@ abstract final class AppTheme {
         primary: AppColors.primary,
         onPrimary: Colors.white,
         secondary: AppColors.secondary,
-        onSecondary: AppColors.textPrimary,
+        onSecondary: Colors.white,
         surface: AppColors.surface,
         onSurface: AppColors.textPrimary,
         error: AppColors.error,

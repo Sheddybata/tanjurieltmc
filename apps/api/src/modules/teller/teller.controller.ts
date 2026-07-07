@@ -4,7 +4,7 @@ import { ApiTags, ApiBearerAuth, ApiOperation, ApiConsumes } from '@nestjs/swagg
 import { Response } from 'express';
 import { Permission, JwtPayload } from '@tanjuriel/shared';
 import { TellerService } from './teller.service';
-import { RegisterCustomerDto, OpenAccountDto, TransactionDto, EnableMobileAccessDto, LoanRepaymentDto } from './dto/teller.dto';
+import { RegisterCustomerDto, OpenAccountDto, TransactionDto, EnableMobileAccessDto, LoanRepaymentDto, TellerTransferDto } from './dto/teller.dto';
 import { JwtAuthGuard, PermissionsGuard } from '../../common/guards/auth.guards';
 import { Permissions, User } from '../../common/decorators/auth.decorators';
 import {
@@ -146,6 +146,14 @@ export class TellerController {
   @ApiOperation({ summary: 'Process a cash withdrawal' })
   async withdrawal(@Body() dto: TransactionDto, @User() user: JwtPayload) {
     const result = await this.tellerService.processWithdrawal(dto, user);
+    return { success: true, data: result };
+  }
+
+  @Post('transfers')
+  @Permissions(Permission.PROCESS_WITHDRAWAL)
+  @ApiOperation({ summary: 'Submit transfer on behalf of customer (manager approval required)' })
+  async transfer(@Body() dto: TellerTransferDto, @User() user: JwtPayload) {
+    const result = await this.tellerService.processTransfer(dto, user);
     return { success: true, data: result };
   }
 

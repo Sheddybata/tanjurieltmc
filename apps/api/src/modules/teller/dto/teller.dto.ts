@@ -115,6 +115,36 @@ export class TransactionDto {
   narration?: string;
 }
 
+export class TellerTransferDto {
+  @ApiProperty()
+  @IsEntityId()
+  accountId: string;
+
+  @ApiProperty()
+  @IsMoneyAmount()
+  @TransformMoney()
+  @IsNumber()
+  @Min(0.01)
+  amount: number;
+
+  @ApiProperty()
+  @IsString()
+  beneficiaryBank: string;
+
+  @ApiProperty()
+  @IsString()
+  beneficiaryAccount: string;
+
+  @ApiProperty()
+  @IsString()
+  beneficiaryName: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  narration?: string;
+}
+
 export class CustomerSearchDto {
   @ApiPropertyOptional()
   @IsOptional()

@@ -10,7 +10,8 @@ import {
   Wallet,
 } from 'lucide-react';
 import { SavingsProductCard } from '@/components/public/savings-product-card';
-import { SITE, SAVINGS_PRODUCTS, LOAN_PRODUCTS, VALUES, HOMEPAGE_STATS, MISSION_VISION } from '@/lib/site-content';
+import { SITE, SAVINGS_PRODUCTS, LOAN_PRODUCTS, VALUES, HOMEPAGE_STATS } from '@/lib/site-content';
+import { MissionVisionCards } from '@/components/public/mission-vision-cards';
 import { formatCurrency } from '@/lib/utils';
 
 export default function HomePage() {
@@ -48,7 +49,7 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div className="mt-16 grid grid-cols-1 gap-6 sm:grid-cols-3">
+          <div className="mt-16 grid grid-cols-1 gap-6 sm:grid-cols-2">
             {HOMEPAGE_STATS.map((stat) => (
               <div key={stat.label} className="rounded-xl bg-white/5 px-6 py-5 backdrop-blur">
                 <p className="font-display text-3xl font-bold text-white">{stat.value}</p>
@@ -108,20 +109,7 @@ export default function HomePage() {
 
       {/* Mission & Vision */}
       <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
-        <div className="grid gap-8 lg:grid-cols-2">
-          <div className="rounded-2xl border border-brand-100 bg-brand-50 p-8 lg:p-10">
-            <p className="text-sm font-semibold uppercase tracking-widest text-brand-600">Mission</p>
-            <p className="mt-4 font-display text-xl font-bold leading-relaxed text-gray-900">
-              {MISSION_VISION.mission}
-            </p>
-          </div>
-          <div className="rounded-2xl border border-gray-100 bg-white p-8 shadow-card lg:p-10">
-            <p className="text-sm font-semibold uppercase tracking-widest text-brand-600">Vision</p>
-            <p className="mt-4 font-display text-xl font-bold leading-relaxed text-gray-900">
-              {MISSION_VISION.vision}
-            </p>
-          </div>
-        </div>
+        <MissionVisionCards />
       </section>
 
       {/* Savings highlight */}

@@ -32,7 +32,7 @@ import {
 
 } from '../../common/utils/reference.util';
 
-import { RegisterCustomerDto, OpenAccountDto, TransactionDto, EnableMobileAccessDto, LoanRepaymentDto } from './dto/teller.dto';
+import { RegisterCustomerDto, OpenAccountDto, TransactionDto, EnableMobileAccessDto, LoanRepaymentDto, TellerTransferDto } from './dto/teller.dto';
 
 import { OperationsService } from '../operations/operations.service';
 import { customerAccountSelect } from '../../common/utils/account-select.util';
@@ -188,8 +188,16 @@ export class TellerService {
 
     if (!customer) throw new NotFoundException('Customer not found');
 
-    return customer;
+    const pendingRequests = await this.prisma.paymentRequest.findMany({
+      where: { customerId: id, status: 'PENDING' },
+      include: {
+        account: { select: { id: true, accountNumber: true, type: true, label: true } },
+        initiatedBy: { select: { firstName: true, lastName: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
 
+    return { ...customer, pendingRequests };
   }
 
 
@@ -352,6 +360,27 @@ export class TellerService {
 
     return { paymentRequest: request, message: 'Withdrawal submitted for manager approval' };
 
+  }
+
+  async processTransfer(dto: TellerTransferDto, user: JwtPayload) {
+    const account = await this.prisma.account.findUnique({ where: { id: dto.accountId } });
+    if (!account) throw new NotFoundException('Account not found');
+    if (account.type === AccountType.MY_PIKIN) {
+      throw new BadRequestException('Transfers are not allowed from Child Savings accounts');
+    }
+
+    const request = await this.operationsService.createTransferRequest({
+      accountId: dto.accountId,
+      amount: dto.amount,
+      beneficiaryBank: dto.beneficiaryBank,
+      beneficiaryAccount: dto.beneficiaryAccount,
+      beneficiaryName: dto.beneficiaryName,
+      narration: dto.narration || 'Branch transfer (teller)',
+      customerId: account.customerId,
+      initiatedByStaffId: user.sub,
+    });
+
+    return { paymentRequest: request, message: 'Transfer submitted for manager approval' };
   }
 
   async enableMobileAccess(customerId: string, dto: EnableMobileAccessDto) {

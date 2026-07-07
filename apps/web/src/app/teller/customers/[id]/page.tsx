@@ -74,6 +74,17 @@ interface CustomerDetail {
     motherName?: string;
   }[];
   loans: { id: string; loanNumber: string; status: string; outstandingBalance: number }[];
+  pendingRequests?: {
+    id: string;
+    reference: string;
+    type: string;
+    status: string;
+    amount: number;
+    createdAt: string;
+    narration?: string;
+    account?: { accountNumber: string; type: string; label?: string };
+    initiatedBy?: { firstName: string; lastName: string };
+  }[];
 }
 
 interface Transaction {
@@ -227,7 +238,14 @@ export default function CustomerDetailPage() {
                     )}
                     <p className="font-medium">{formatCurrency(Number(a.balance))}</p>
                     {a.type === 'MY_PIKIN' && (
-                      <Button
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        <Link
+                          href={`/teller/child-savings/fund?customerId=${customer.id}&accountId=${a.id}`}
+                          className="text-xs text-brand-600 hover:underline"
+                        >
+                          Fund Child Savings
+                        </Link>
+                        <Button
                         type="button"
                         variant="secondary"
                         className="mt-2"
@@ -249,6 +267,7 @@ export default function CustomerDetailPage() {
                       >
                         Download statement (PDF)
                       </Button>
+                      </div>
                     )}
                   </li>
                 ))}
@@ -289,6 +308,60 @@ export default function CustomerDetailPage() {
             </div>
           </Card>
         )}
+
+        {(customer.pendingRequests?.length ?? 0) > 0 && (
+          <Card className="mt-6 p-6">
+            <h2 className="mb-4 text-lg font-semibold">Pending operations</h2>
+            <p className="mb-4 text-sm text-gray-600">
+              These requests await manager approval. The customer will see them in the mobile app once submitted.
+            </p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b text-xs uppercase text-gray-500">
+                    <th className="pb-2 pr-3">Reference</th>
+                    <th className="pb-2 pr-3">Type</th>
+                    <th className="pb-2 pr-3">Account</th>
+                    <th className="pb-2 pr-3">Amount</th>
+                    <th className="pb-2 pr-3">Initiated by</th>
+                    <th className="pb-2">Submitted</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {customer.pendingRequests!.map((r) => (
+                    <tr key={r.id} className="border-b border-gray-50">
+                      <td className="py-2 pr-3 font-mono text-xs">{r.reference}</td>
+                      <td className="py-2 pr-3">{r.type.replace(/_/g, ' ')}</td>
+                      <td className="py-2 pr-3">
+                        {r.account?.accountNumber}
+                        {r.account?.label ? ` (${r.account.label})` : ''}
+                      </td>
+                      <td className="py-2 pr-3">{formatCurrency(Number(r.amount))}</td>
+                      <td className="py-2 pr-3 text-gray-600">
+                        {r.initiatedBy ? `${r.initiatedBy.firstName} ${r.initiatedBy.lastName}` : '—'}
+                      </td>
+                      <td className="py-2 text-gray-500">{formatDate(r.createdAt)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        )}
+
+        <Card className="mt-6 p-6">
+          <h2 className="mb-4 text-lg font-semibold">Branch operations</h2>
+          <div className="flex flex-wrap gap-3">
+            <Link href={`/teller/deposits`} className="text-sm text-brand-600 hover:underline">Submit deposit</Link>
+            <Link href={`/teller/withdrawals`} className="text-sm text-brand-600 hover:underline">Submit withdrawal</Link>
+            <Link href={`/teller/transfers`} className="text-sm text-brand-600 hover:underline">Transfer on behalf</Link>
+            {childSavingsAccounts.length > 0 && (
+              <Link href={`/teller/child-savings/fund?customerId=${customer.id}`} className="text-sm text-brand-600 hover:underline">
+                Fund Child Savings
+              </Link>
+            )}
+          </div>
+        </Card>
 
         <Card className="mt-6 p-6">
           <h2 className="mb-4 text-lg font-semibold">Mobile app access</h2>

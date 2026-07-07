@@ -15,8 +15,8 @@ export const SITE = {
 
 export const NAV = {
   personal: [
-    { label: 'Daily Savings', href: '/personal/savings#daily-savings' },
-    { label: 'Child Savings', href: '/personal/savings#child-savings' },
+    { label: 'Daily Savings', href: '/personal/savings/daily-savings' },
+    { label: 'Child Savings', href: '/personal/savings/child-savings' },
     { label: 'Loans', href: '/personal/loans' },
   ],
   about: [
@@ -51,6 +51,7 @@ export const SAVINGS_PRODUCTS = [
     ],
     idealFor: 'Traders, self-employed workers, and savers who prefer small, frequent contributions',
     accent: 'emerald' as const,
+    image: '/dailysavings.png',
   },
   {
     id: 'child-savings',
@@ -71,8 +72,13 @@ export const SAVINGS_PRODUCTS = [
     ],
     idealFor: 'Parents and guardians saving for school fees, skills training, or a child\'s future',
     accent: 'amber' as const,
+    image: '/childsavings.png',
   },
 ];
+
+export function getSavingsProduct(slug: string) {
+  return SAVINGS_PRODUCTS.find((product) => product.slug === slug);
+}
 
 export const LOAN_PRODUCTS = [
   {
@@ -142,6 +148,8 @@ export const MISSION_VISION = {
     'To provide accessible, trustworthy financial services that help individuals, families, and small businesses save, borrow, and build a more secure future.',
   vision:
     'A Nigeria where every hardworking person — trader, artisan, parent, or entrepreneur — has a financial partner they can rely on.',
+  missionImage: '/mission.png',
+  visionImage: '/vision.png',
 };
 
 export const APP_FEATURES = [
@@ -181,7 +189,6 @@ export const FAQ = [
 ];
 
 export const HOMEPAGE_STATS = [
-  { value: '2', label: 'Savings products built for real life' },
   { value: '100%', label: 'Community-focused service' },
   { value: '24/7', label: 'Mobile app access to your accounts' },
 ];

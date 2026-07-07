@@ -10,12 +10,16 @@ export interface AccountOption {
   customerName: string;
   customerPhone: string;
   balance?: number;
+  accountType?: string;
+  label?: string;
 }
 
 interface AccountSearchSelectProps {
   value: string;
   onChange: (accountId: string, option: AccountOption | null) => void;
   label?: string;
+  accountTypeFilter?: string;
+  prefill?: AccountOption | null;
 }
 
 interface CustomerResult {
@@ -23,14 +27,27 @@ interface CustomerResult {
   firstName: string;
   lastName: string;
   phone: string;
-  accounts: { id: string; accountNumber: string; balance?: number }[];
+  accounts: { id: string; accountNumber: string; balance?: number; type?: string; label?: string }[];
 }
 
-export function AccountSearchSelect({ value, onChange, label = 'Customer account' }: AccountSearchSelectProps) {
+export function AccountSearchSelect({
+  value,
+  onChange,
+  label = 'Customer account',
+  accountTypeFilter,
+  prefill,
+}: AccountSearchSelectProps) {
   const [query, setQuery] = useState('');
   const [options, setOptions] = useState<AccountOption[]>([]);
   const [loading, setLoading] = useState(false);
   const [selected, setSelected] = useState<AccountOption | null>(null);
+
+  useEffect(() => {
+    if (!prefill || value) return;
+    setSelected(prefill);
+    setQuery(prefill.label ? `${prefill.accountNumber} (${prefill.label})` : prefill.accountNumber);
+    onChange(prefill.accountId, prefill);
+  }, [prefill, value, onChange]);
 
   useEffect(() => {
     if (query.trim().length < 2) {
@@ -46,12 +63,15 @@ export function AccountSearchSelect({ value, onChange, label = 'Customer account
         const flat: AccountOption[] = [];
         for (const c of res.data ?? []) {
           for (const a of c.accounts ?? []) {
+            if (accountTypeFilter && a.type !== accountTypeFilter) continue;
             flat.push({
               accountId: a.id,
               accountNumber: a.accountNumber,
               customerName: `${c.firstName} ${c.lastName}`,
               customerPhone: c.phone,
               balance: a.balance,
+              accountType: a.type,
+              label: a.label,
             });
           }
         }
@@ -63,7 +83,7 @@ export function AccountSearchSelect({ value, onChange, label = 'Customer account
       }
     }, 300);
     return () => clearTimeout(timer);
-  }, [query]);
+  }, [query, accountTypeFilter]);
 
   function pick(option: AccountOption) {
     setSelected(option);
@@ -102,6 +122,7 @@ export function AccountSearchSelect({ value, onChange, label = 'Customer account
               >
                 <span className="font-mono text-brand-700">{o.accountNumber}</span>
                 <span className="ml-2 text-gray-600">{o.customerName}</span>
+                {o.label && <span className="ml-1 text-xs text-amber-700">({o.label})</span>}
                 <span className="block text-xs text-gray-400">{o.customerPhone}</span>
               </button>
             </li>

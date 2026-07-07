@@ -14,11 +14,22 @@ function formatApiMessage(message: unknown): string {
   return 'Request failed';
 }
 
+const DEFAULT_GET_CACHE_TTL_MS = 20_000;
+
 class ApiClient {
   private baseUrl: string;
+  // Short-lived client-side cache so navigating between pages reuses recent
+  // GET responses instead of re-hitting the API. Any write clears it.
+  private getCache = new Map<string, { data: unknown; expires: number }>();
+  private inflight = new Map<string, Promise<unknown>>();
 
   constructor(baseUrl: string) {
     this.baseUrl = `${baseUrl}/api/v1`;
+  }
+
+  private clearGetCache() {
+    this.getCache.clear();
+    this.inflight.clear();
   }
 
   private getToken(): string | null {
@@ -103,11 +114,40 @@ class ApiClient {
     }
   }
 
-  get<T>(endpoint: string) {
-    return this.request<T>(endpoint);
+  get<T>(endpoint: string, options?: { ttlMs?: number; noCache?: boolean }): Promise<T> {
+    if (USE_MOCK || options?.noCache) {
+      return this.request<T>(endpoint);
+    }
+
+    const now = Date.now();
+    const cached = this.getCache.get(endpoint);
+    if (cached && cached.expires > now) {
+      return Promise.resolve(cached.data as T);
+    }
+
+    const pending = this.inflight.get(endpoint);
+    if (pending) {
+      return pending as Promise<T>;
+    }
+
+    const ttl = options?.ttlMs ?? DEFAULT_GET_CACHE_TTL_MS;
+    const promise = this.request<T>(endpoint)
+      .then((data) => {
+        this.getCache.set(endpoint, { data, expires: Date.now() + ttl });
+        this.inflight.delete(endpoint);
+        return data;
+      })
+      .catch((err) => {
+        this.inflight.delete(endpoint);
+        throw err;
+      });
+
+    this.inflight.set(endpoint, promise);
+    return promise;
   }
 
   post<T>(endpoint: string, body?: unknown) {
+    this.clearGetCache();
     return this.request<T>(endpoint, {
       method: 'POST',
       body: body instanceof FormData ? body : body ? JSON.stringify(body) : undefined,
@@ -125,6 +165,7 @@ class ApiClient {
   }
 
   patch<T>(endpoint: string, body?: unknown) {
+    this.clearGetCache();
     return this.request<T>(endpoint, {
       method: 'PATCH',
       body: body ? JSON.stringify(body) : undefined,
@@ -132,6 +173,7 @@ class ApiClient {
   }
 
   put<T>(endpoint: string, body?: unknown) {
+    this.clearGetCache();
     return this.request<T>(endpoint, {
       method: 'PUT',
       body: body ? JSON.stringify(body) : undefined,

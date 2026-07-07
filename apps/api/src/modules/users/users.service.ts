@@ -1,5 +1,6 @@
-import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
+import { Injectable, ConflictException, NotFoundException, BadRequestException } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
+import { UserRole } from '@tanjuriel/database';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { CreateUserDto, UpdateUserDto } from './dto/users.dto';
 import { paginate, paginationMeta } from '../../common/utils/reference.util';
@@ -9,6 +10,9 @@ export class UsersService {
   constructor(private prisma: PrismaService) {}
 
   async create(dto: CreateUserDto) {
+    if (dto.role !== UserRole.TELLER && dto.role !== UserRole.MANAGER) {
+      throw new BadRequestException('Only teller and manager accounts can be created here');
+    }
     const existing = await this.prisma.user.findFirst({
       where: { OR: [{ email: dto.email.toLowerCase() }, { employeeId: dto.employeeId }] },
     });
@@ -68,5 +72,15 @@ export class UsersService {
     });
     const { passwordHash, ...safe } = user;
     return safe;
+  }
+
+  async resetPassword(id: string, password: string) {
+    await this.findOne(id);
+    const passwordHash = await bcrypt.hash(password, 12);
+    await this.prisma.user.update({
+      where: { id },
+      data: { passwordHash },
+    });
+    return { message: 'Password updated' };
   }
 }

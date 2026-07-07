@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, FormEvent } from 'react';
+import { Suspense, useEffect, useState, FormEvent } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { Header } from '@/components/layout/header';
@@ -12,7 +12,7 @@ import { api } from '@/lib/api';
 import { formatMoneyForApi } from '@/lib/utils';
 import { useToast } from '@/components/ui/toast-provider';
 
-export default function FundChildSavingsPage() {
+function FundChildSavingsForm() {
   const { showToast } = useToast();
   const searchParams = useSearchParams();
   const customerId = searchParams.get('customerId');
@@ -80,26 +80,34 @@ export default function FundChildSavingsPage() {
   }
 
   return (
+    <Card className="max-w-lg">
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <AccountSearchSelect
+          value={accountId}
+          onChange={(id) => setAccountId(id)}
+          accountTypeFilter="MY_PIKIN"
+          prefill={prefill}
+          label="Child Savings account"
+        />
+        <Input name="amount" label="Amount (NGN)" type="number" min="1" step="1" required />
+        <Input name="narration" label="Narration" placeholder="Child Savings contribution" />
+        <Button type="submit" loading={loading}>Submit for Approval</Button>
+      </form>
+    </Card>
+  );
+}
+
+export default function FundChildSavingsPage() {
+  return (
     <DashboardLayout>
       <Header
         title="Fund Child Savings"
         subtitle="Cash contribution to a Child Savings account — manager approval required before balance is credited"
       />
       <div className="p-8">
-        <Card className="max-w-lg">
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <AccountSearchSelect
-              value={accountId}
-              onChange={(id) => setAccountId(id)}
-              accountTypeFilter="MY_PIKIN"
-              prefill={prefill}
-              label="Child Savings account"
-            />
-            <Input name="amount" label="Amount (NGN)" type="number" min="1" step="1" required />
-            <Input name="narration" label="Narration" placeholder="Child Savings contribution" />
-            <Button type="submit" loading={loading}>Submit for Approval</Button>
-          </form>
-        </Card>
+        <Suspense fallback={<Card className="max-w-lg p-6 text-sm text-gray-500">Loading…</Card>}>
+          <FundChildSavingsForm />
+        </Suspense>
       </div>
     </DashboardLayout>
   );

@@ -3,13 +3,14 @@
 import { useState, FormEvent } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Landmark, Eye, EyeOff, Lock, ArrowLeft } from 'lucide-react';
+import { Eye, EyeOff, Lock, ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { publicSiteUrl } from '@/lib/domains';
+import { BrandLogo } from '@/components/brand-logo';
 
-const showDemoAccounts = process.env.NODE_ENV === 'development';
+const showDemoAccounts = process.env.NEXT_PUBLIC_SHOW_DEMO_ACCOUNTS === 'true';
 const publicHomeUrl = publicSiteUrl('/');
 
 export default function StaffLoginPage() {
@@ -44,11 +45,8 @@ export default function StaffLoginPage() {
             <ArrowLeft className="h-4 w-4" />
             <span className="text-sm">Back to website</span>
           </Link>
-          <div className="mt-8 flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 backdrop-blur">
-              <Landmark className="h-6 w-6 text-white" />
-            </div>
-            <span className="font-display text-xl font-bold text-white">Tanjuriel Microfinance</span>
+          <div className="mt-8 inline-flex rounded-2xl bg-white p-2">
+            <BrandLogo height={72} priority />
           </div>
         </div>
 
@@ -93,12 +91,7 @@ export default function StaffLoginPage() {
         <div className="flex flex-1 items-center justify-center p-8">
           <div className="w-full max-w-md">
             <div className="mb-8 lg:hidden">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-600">
-                  <Landmark className="h-6 w-6 text-white" />
-                </div>
-                <span className="font-display text-xl font-bold">Tanjuriel</span>
-              </div>
+              <BrandLogo height={64} priority />
             </div>
 
             <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-brand-50 px-3 py-1 text-xs font-medium text-brand-700">

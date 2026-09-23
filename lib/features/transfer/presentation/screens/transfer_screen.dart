@@ -175,7 +175,10 @@ class _TransferScreenState extends ConsumerState<TransferScreen> {
     final selected = ref.watch(selectedAccountProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Transfer')),
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        title: const Text('Transfer'),
+      ),
       body: _loadingBanks
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(

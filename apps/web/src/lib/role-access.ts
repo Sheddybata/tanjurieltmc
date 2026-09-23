@@ -15,6 +15,10 @@ export function canAccessPath(role: StaffRole, pathname: string): boolean {
   return true;
 }
 
+export function staffLoanBasePath(role?: string): '/teller/loans' | '/manager/loans' {
+  return role === 'TELLER' ? '/teller/loans' : '/manager/loans';
+}
+
 export function accessDeniedRedirect(role: StaffRole): string {
   return '/dashboard';
 }

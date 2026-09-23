@@ -1,7 +1,8 @@
 import Link from 'next/link';
-import { Landmark, Lock } from 'lucide-react';
+import { Lock } from 'lucide-react';
 import { SITE, NAV } from '@/lib/site-content';
 import { staffPortalUrl } from '@/lib/domains';
+import { BrandLogo } from '@/components/brand-logo';
 
 export function PublicFooter() {
   return (
@@ -9,11 +10,8 @@ export function PublicFooter() {
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
         <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-4">
           <div>
-            <div className="flex items-center gap-2.5">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10">
-                <Landmark className="h-5 w-5 text-white" />
-              </div>
-              <span className="font-display text-lg font-bold text-white">{SITE.shortName}</span>
+            <div className="inline-flex rounded-xl bg-white p-1.5">
+              <BrandLogo height={52} />
             </div>
             <p className="mt-4 text-sm leading-relaxed text-brand-200">{SITE.description}</p>
           </div>

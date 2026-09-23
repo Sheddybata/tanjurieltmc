@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:tanjuriel_microfinance/core/constants/app_constants.dart';
 import 'package:tanjuriel_microfinance/core/theme/app_colors.dart';
 import 'package:tanjuriel_microfinance/core/utils/receipt_share_util.dart';
+import 'package:tanjuriel_microfinance/core/widgets/app_logo.dart';
 
 class TransferReceiptCard extends StatelessWidget {
   const TransferReceiptCard({super.key, required this.data});
@@ -17,15 +17,7 @@ class TransferReceiptCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Center(
-              child: Text(
-                AppConstants.appName,
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w700,
-                    ),
-              ),
-            ),
+            const Center(child: AppLogo(height: 72)),
             const SizedBox(height: 4),
             Center(
               child: Text(data.title, style: Theme.of(context).textTheme.bodySmall),

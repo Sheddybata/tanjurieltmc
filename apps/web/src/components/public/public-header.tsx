@@ -3,10 +3,11 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
-import { Landmark, Lock, Menu, X, ChevronDown, Smartphone } from 'lucide-react';
+import { Lock, Menu, X, ChevronDown, Smartphone } from 'lucide-react';
 import { SITE, NAV } from '@/lib/site-content';
 import { staffPortalUrl } from '@/lib/domains';
 import { cn } from '@/lib/utils';
+import { BrandLogo } from '@/components/brand-logo';
 
 const staffLoginUrl = staffPortalUrl('/staff/login');
 
@@ -21,11 +22,8 @@ export function PublicHeader() {
   return (
     <header className="sticky top-0 z-50 border-b border-gray-100 bg-white/95 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        <Link href="/" className="flex items-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-600">
-            <Landmark className="h-5 w-5 text-white" />
-          </div>
-          <span className="font-display text-lg font-bold text-gray-900">{SITE.shortName}</span>
+        <Link href="/" className="flex items-center" aria-label={SITE.shortName}>
+          <BrandLogo height={44} priority />
         </Link>
 
         <nav className="hidden items-center gap-1 lg:flex">

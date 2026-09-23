@@ -2,9 +2,10 @@ import { Controller, Get, Post, Body, Param, Query, Patch, UseGuards, UploadedFi
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiConsumes } from '@nestjs/swagger';
 import { Response } from 'express';
+import { LoanStatus } from '@tanjuriel/database';
 import { Permission, JwtPayload } from '@tanjuriel/shared';
 import { TellerService } from './teller.service';
-import { RegisterCustomerDto, OpenAccountDto, TransactionDto, EnableMobileAccessDto, LoanRepaymentDto, TellerTransferDto } from './dto/teller.dto';
+import { RegisterCustomerDto, OpenAccountDto, TransactionDto, EnableMobileAccessDto, LoanRepaymentDto, TellerTransferDto, TellerApplyLoanDto, TellerLoanQuoteDto } from './dto/teller.dto';
 import { JwtAuthGuard, PermissionsGuard } from '../../common/guards/auth.guards';
 import { Permissions, User } from '../../common/decorators/auth.decorators';
 import {
@@ -17,6 +18,11 @@ import {
   customerPhotoPublicPath,
   customerPhotoStorage,
 } from '../../common/utils/customer-photo-upload.util';
+import {
+  collateralPhotoFilter,
+  collateralPhotoPublicPath,
+  collateralPhotoStorage,
+} from '../../common/utils/collateral-upload.util';
 import { ChildSavingsStatementService } from '../child-savings/child-savings-statement.service';
 
 @ApiTags('Teller')
@@ -163,6 +169,55 @@ export class TellerController {
   async enableMobileAccess(@Param('id') id: string, @Body() dto: EnableMobileAccessDto) {
     const customer = await this.tellerService.enableMobileAccess(id, dto);
     return { success: true, data: customer };
+  }
+
+  @Post('loans/quote')
+  @Permissions(Permission.CREATE_LOAN)
+  @ApiOperation({ summary: 'Preview loan fees and repayment schedule for a walk-in application' })
+  async quoteLoan(@Body() dto: TellerLoanQuoteDto) {
+    const data = await this.tellerService.quoteLoan(dto);
+    return { success: true, data };
+  }
+
+  @Post('loans')
+  @Permissions(Permission.CREATE_LOAN)
+  @ApiOperation({ summary: 'Record a paper/walk-in loan application (manager must still approve)' })
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(
+    FileInterceptor('collateralPhoto', {
+      storage: collateralPhotoStorage,
+      fileFilter: collateralPhotoFilter,
+      limits: { fileSize: 5 * 1024 * 1024 },
+    }),
+  )
+  async createLoan(
+    @Body() dto: TellerApplyLoanDto,
+    @User() user: JwtPayload,
+    @UploadedFile() collateralPhoto?: Express.Multer.File,
+  ) {
+    const photoUrl = collateralPhoto ? collateralPhotoPublicPath(collateralPhoto.filename) : undefined;
+    const loan = await this.tellerService.createLoanApplication(dto, user, photoUrl);
+    return { success: true, data: loan };
+  }
+
+  @Get('loans')
+  @Permissions(Permission.VIEW_LOANS)
+  @ApiOperation({ summary: 'List loan applications recorded at the branch' })
+  async getLoans(
+    @Query('status') status?: LoanStatus,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+  ) {
+    const result = await this.tellerService.getLoans(status, Number(page) || 1, Number(limit) || 20);
+    return { success: true, ...result };
+  }
+
+  @Get('loans/:id')
+  @Permissions(Permission.VIEW_LOANS)
+  @ApiOperation({ summary: 'Get a loan application (read-only for tellers)' })
+  async getLoan(@Param('id') id: string) {
+    const loan = await this.tellerService.getLoan(id);
+    return { success: true, data: loan };
   }
 
   @Post('loans/repay')

@@ -14,7 +14,7 @@ import {
 
 import { AccountStatus, AccountType, CustomerKycStatus, LoanStatus, PaymentChannel, RegistrationSource } from '@tanjuriel/database';
 
-import { JwtPayload, Permission } from '@tanjuriel/shared';
+import { JwtPayload } from '@tanjuriel/shared';
 
 import { PrismaService } from '../../common/prisma/prisma.service';
 
@@ -32,9 +32,10 @@ import {
 
 } from '../../common/utils/reference.util';
 
-import { RegisterCustomerDto, OpenAccountDto, TransactionDto, EnableMobileAccessDto, LoanRepaymentDto, TellerTransferDto } from './dto/teller.dto';
+import { RegisterCustomerDto, OpenAccountDto, TransactionDto, EnableMobileAccessDto, LoanRepaymentDto, TellerTransferDto, TellerApplyLoanDto, TellerLoanQuoteDto } from './dto/teller.dto';
 
 import { OperationsService } from '../operations/operations.service';
+import { LoanApplicationService } from '../loans/loan-application.service';
 import { customerAccountSelect } from '../../common/utils/account-select.util';
 import {
   assertChildSavingsOpenInput,
@@ -58,6 +59,8 @@ export class TellerService {
     private prisma: PrismaService,
 
     private operationsService: OperationsService,
+
+    private loanApplicationService: LoanApplicationService,
 
   ) {}
 
@@ -506,6 +509,83 @@ export class TellerService {
       where: { id },
       data: { kycStatus: CustomerKycStatus.REJECTED },
     });
+  }
+
+  quoteLoan(dto: TellerLoanQuoteDto) {
+    return this.loanApplicationService.quoteLoan(dto);
+  }
+
+  async createLoanApplication(dto: TellerApplyLoanDto, user: JwtPayload, collateralPhotoUrl?: string) {
+    const { customerId, ...applicationDto } = dto;
+    const loan = await this.loanApplicationService.createApplication({
+      customerId,
+      dto: applicationDto,
+      collateralPhotoUrl,
+      actorId: user.sub,
+      source: 'BRANCH',
+    });
+    return this.getLoan(loan.id);
+  }
+
+  async getLoans(status?: LoanStatus, page = 1, limit = 20) {
+    const { skip, take, page: p, limit: l } = paginate(page, limit);
+    const where = status ? { status } : {};
+
+    const [loans, total] = await Promise.all([
+      this.prisma.loan.findMany({
+        where,
+        skip,
+        take,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          customer: {
+            select: {
+              firstName: true,
+              lastName: true,
+              phone: true,
+              accounts: {
+                where: { status: AccountStatus.ACTIVE },
+                orderBy: { createdAt: 'asc' },
+                select: { accountNumber: true, type: true },
+              },
+            },
+          },
+          product: { select: { name: true, code: true } },
+          approvals: {
+            include: { actor: { select: { firstName: true, lastName: true, role: true } } },
+            orderBy: { createdAt: 'desc' },
+          },
+        },
+      }),
+      this.prisma.loan.count({ where }),
+    ]);
+
+    return { data: loans, meta: paginationMeta(total, p, l) };
+  }
+
+  async getLoan(id: string) {
+    const loan = await this.prisma.loan.findUnique({
+      where: { id },
+      include: {
+        customer: {
+          include: {
+            accounts: {
+              where: { status: AccountStatus.ACTIVE },
+              orderBy: { createdAt: 'asc' },
+              select: { accountNumber: true, type: true },
+            },
+          },
+        },
+        product: true,
+        schedules: { orderBy: { installmentNumber: 'asc' } },
+        approvals: {
+          include: { actor: { select: { firstName: true, lastName: true, role: true } } },
+          orderBy: { createdAt: 'desc' },
+        },
+      },
+    });
+    if (!loan) throw new NotFoundException('Loan not found');
+    return loan;
   }
 }
 

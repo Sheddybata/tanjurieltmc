@@ -8,10 +8,11 @@ import {
   Min,
   IsNotEmpty,
 } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional, OmitType } from '@nestjs/swagger';
 import { Gender, AccountType, ContributionFrequency } from '@tanjuriel/database';
 import { IsEntityId } from '../../../common/validators/entity-id.decorator';
 import { IsMoneyAmount, TransformMoney } from '../../../common/validators/money.decorator';
+import { CustomerApplyLoanDto } from '../../customer/dto/customer-loan.dto';
 
 export { RegisterCustomerDto } from './register-customer.dto';
 
@@ -159,3 +160,10 @@ export class CustomerSearchDto {
   @IsOptional()
   limit?: number;
 }
+
+export class TellerApplyLoanDto extends OmitType(CustomerApplyLoanDto, ['pin'] as const) {
+  @IsEntityId()
+  customerId: string;
+}
+
+export { CustomerLoanQuoteDto as TellerLoanQuoteDto } from '../../customer/dto/customer-loan.dto';

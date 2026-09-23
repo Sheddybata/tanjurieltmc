@@ -4,13 +4,14 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:share_plus/share_plus.dart';
-import 'package:tanjuriel_microfinance/core/constants/app_constants.dart';
 import 'package:tanjuriel_microfinance/core/utils/currency_formatter.dart';
+import 'package:tanjuriel_microfinance/core/widgets/app_logo.dart';
 import 'package:tanjuriel_microfinance/shared/models/transaction_model.dart';
 import 'package:tanjuriel_microfinance/shared/models/transfer_model.dart';
 
@@ -131,6 +132,8 @@ class ReceiptShareUtil {
   }) async {
     final pdf = pw.Document();
     final dateStr = DateFormat('dd MMM yyyy, HH:mm').format(data.dateTime);
+    final logoBytes = await rootBundle.load(AppLogo.assetPath);
+    final logoImage = pw.MemoryImage(logoBytes.buffer.asUint8List());
 
     pdf.addPage(
       pw.Page(
@@ -140,10 +143,7 @@ class ReceiptShareUtil {
           return pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              pw.Text(
-                AppConstants.appName,
-                style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold),
-              ),
+              pw.Center(child: pw.Image(logoImage, height: 72)),
               pw.SizedBox(height: 4),
               pw.Text(data.title, style: const pw.TextStyle(fontSize: 12)),
               pw.SizedBox(height: 24),

@@ -198,6 +198,28 @@ export default function DashboardPage() {
                   </div>
                 </Card>
               )}
+
+              {user?.role === UserRole.TELLER && (
+                <Card title="Walk-in capture" subtitle="Record paper applications and cash at the desk">
+                  <div className="space-y-2">
+                    {[
+                      { href: '/teller/customers/new', label: 'Register customer', desc: 'Create the member if they are not already on the system' },
+                      { href: '/teller/loans/new', label: 'Record loan application', desc: 'Key in a paper application for the manager to approve' },
+                      { href: '/teller/deposits', label: 'Cash deposit', desc: 'Submit a deposit for manager approval' },
+                      { href: '/teller/loan-repayments', label: 'Loan repayment', desc: 'Record cash received against an active loan' },
+                    ].map((link) => (
+                      <Link
+                        key={link.href}
+                        href={link.href}
+                        className="block rounded-lg border border-gray-100 px-4 py-3 transition hover:border-brand-200 hover:bg-brand-50/50"
+                      >
+                        <p className="text-sm font-semibold text-gray-900">{link.label}</p>
+                        <p className="text-xs text-gray-500">{link.desc}</p>
+                      </Link>
+                    ))}
+                  </div>
+                </Card>
+              )}
             </div>
           </>
         )}

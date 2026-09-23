@@ -34,5 +34,6 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
+    - assets/tanjuriel.jpg
     - assets/data/states.json
     - assets/data/lgas.json

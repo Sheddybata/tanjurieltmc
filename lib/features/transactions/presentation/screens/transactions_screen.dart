@@ -44,7 +44,10 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Transaction History')),
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        title: const Text('Transaction History'),
+      ),
       body: Column(
         children: [
           SingleChildScrollView(

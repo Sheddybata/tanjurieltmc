@@ -180,7 +180,7 @@ export const FAQ = [
   },
   {
     q: 'Is the mobile app free?',
-    a: 'Yes. Download the Tanjuriel app at no cost. Standard transaction fees may apply depending on the service.',
+    a: 'Yes. The Android app is free to download from this website. The iOS version is coming soon. Standard transaction fees may apply depending on the service.',
   },
   {
     q: 'How do I reach customer support?',

@@ -18,6 +18,8 @@ import { primaryMemberAccountNumber } from '@/lib/member-id';
 import { CustomerBioCard } from '@/components/customers/customer-bio-card';
 import { apiAssetUrl } from '@/lib/api-origin';
 import { useToast } from '@/components/ui/toast-provider';
+import { useAuth } from '@/lib/auth-context';
+import { staffLoanBasePath } from '@/lib/role-access';
 
 interface CustomerDetail {
   id: string;
@@ -100,6 +102,8 @@ export default function CustomerDetailPage() {
   const params = useParams();
   const id = params.id as string;
   const { showToast } = useToast();
+  const { user } = useAuth();
+  const loanBase = staffLoanBasePath(user?.role);
   const [customer, setCustomer] = useState<CustomerDetail | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -218,7 +222,7 @@ export default function CustomerDetailPage() {
                 <Link href={`/teller/accounts/new?customerId=${customer.id}`} className="text-sm text-brand-600 hover:underline">
                   Open account
                 </Link>
-                <Link href={`/manager/loans/new?customerId=${customer.id}`} className="text-sm text-brand-600 hover:underline">
+                <Link href={`${loanBase}/new?customerId=${customer.id}`} className="text-sm text-brand-600 hover:underline">
                   New loan application
                 </Link>
               </div>
@@ -355,6 +359,9 @@ export default function CustomerDetailPage() {
             <Link href={`/teller/deposits`} className="text-sm text-brand-600 hover:underline">Submit deposit</Link>
             <Link href={`/teller/withdrawals`} className="text-sm text-brand-600 hover:underline">Submit withdrawal</Link>
             <Link href={`/teller/transfers`} className="text-sm text-brand-600 hover:underline">Transfer on behalf</Link>
+            <Link href={`${loanBase}/new?customerId=${customer.id}`} className="text-sm text-brand-600 hover:underline">
+              Record loan application
+            </Link>
             {childSavingsAccounts.length > 0 && (
               <Link href={`/teller/child-savings/fund?customerId=${customer.id}`} className="text-sm text-brand-600 hover:underline">
                 Fund Child Savings
@@ -393,7 +400,7 @@ export default function CustomerDetailPage() {
             <ul className="space-y-2">
               {customer.loans.map((l) => (
                 <li key={l.id} className="flex justify-between text-sm">
-                  <Link href={`/manager/loans/${l.id}`} className="font-mono text-brand-600 hover:underline">{l.loanNumber}</Link>
+                  <Link href={`${loanBase}/${l.id}`} className="font-mono text-brand-600 hover:underline">{l.loanNumber}</Link>
                   <span>{l.status} · {formatCurrency(Number(l.outstandingBalance))}</span>
                 </li>
               ))}

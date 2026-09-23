@@ -112,6 +112,10 @@ export const NAV_ITEMS: NavItem[] = [
 
   { label: 'Loan Repayments', href: '/teller/loan-repayments', icon: Banknote, roles: [UserRole.TELLER], group: 'teller' },
 
+  { label: 'Loan Applications', href: '/teller/loans', icon: FileText, roles: [UserRole.TELLER], group: 'teller' },
+
+  { label: 'Record Loan Application', href: '/teller/loans/new', icon: FileText, roles: [UserRole.TELLER], group: 'teller' },
+
   { label: 'Operations Queue', href: '/manager/operations', icon: ClipboardList, roles: [UserRole.MANAGER, UserRole.ADMIN], group: 'operations' },
 
   { label: 'Reconciliation', href: '/manager/reconciliation', icon: Scale, roles: [UserRole.MANAGER, UserRole.ADMIN], group: 'operations' },

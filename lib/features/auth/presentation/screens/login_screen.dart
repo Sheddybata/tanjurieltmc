@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tanjuriel_microfinance/core/config/app_config.dart';
 import 'package:tanjuriel_microfinance/core/utils/validators.dart';
 import 'package:tanjuriel_microfinance/core/widgets/app_button.dart';
+import 'package:tanjuriel_microfinance/core/widgets/app_logo.dart';
 import 'package:tanjuriel_microfinance/core/widgets/app_text_field.dart';
 import 'package:tanjuriel_microfinance/core/widgets/pin_text_field.dart';
 import 'package:tanjuriel_microfinance/features/auth/presentation/providers/auth_provider.dart';
@@ -60,6 +61,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              const Center(child: AppLogo(height: 96)),
+              const SizedBox(height: 24),
               Text('Welcome back', style: Theme.of(context).textTheme.headlineSmall),
               const SizedBox(height: 8),
               Text(

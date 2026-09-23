@@ -11,6 +11,7 @@
     "migrate:resolve-rolled-back": "dotenv -e ../../.env -- prisma migrate resolve --rolled-back",
     "push": "dotenv -e ../../.env -- prisma db push",
     "seed": "dotenv -e ../../.env -- tsx prisma/seed.ts",
+    "reset-operational": "dotenv -e ../../.env -- tsx prisma/reset-operational-data.ts",
     "studio": "dotenv -e ../../.env -- prisma studio",
     "build": "tsc"
   },

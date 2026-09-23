@@ -83,6 +83,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.PROCESS_WITHDRAWAL,
     Permission.VIEW_TRANSACTIONS,
     Permission.VIEW_DASHBOARD,
+    Permission.CREATE_LOAN,
+    Permission.VIEW_LOANS,
   ],
 };
 

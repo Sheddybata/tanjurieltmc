@@ -3,9 +3,10 @@ import { TellerService } from './teller.service';
 import { TellerController } from './teller.controller';
 import { OperationsModule } from '../operations/operations.module';
 import { ChildSavingsModule } from '../child-savings/child-savings.module';
+import { LoansModule } from '../loans/loans.module';
 
 @Module({
-  imports: [OperationsModule, ChildSavingsModule],
+  imports: [OperationsModule, ChildSavingsModule, LoansModule],
   controllers: [TellerController],
   providers: [TellerService],
   exports: [TellerService],

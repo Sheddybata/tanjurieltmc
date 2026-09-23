@@ -170,11 +170,24 @@ export async function mockRequest<T>(
   await delay();
 
   const method = options.method || 'GET';
-  const body = options.body ? JSON.parse(options.body as string) : {};
+  let body: Record<string, unknown> = {};
+  if (options.body) {
+    if (typeof FormData !== 'undefined' && options.body instanceof FormData) {
+      options.body.forEach((value, key) => {
+        body[key] = value;
+      });
+    } else if (typeof options.body === 'string') {
+      try {
+        body = JSON.parse(options.body) as Record<string, unknown>;
+      } catch {
+        body = {};
+      }
+    }
+  }
 
   if (endpoint === '/auth/login' && method === 'POST') {
-    const user = MOCK_USERS[body.email?.toLowerCase()];
-    if (!user || user.password !== body.password) {
+    const user = MOCK_USERS[String(body.email ?? '').toLowerCase()];
+    if (!user || user.password !== String(body.password ?? '')) {
       throw { message: 'Invalid credentials', statusCode: 401 };
     }
     const { password: _, ...profile } = user;
@@ -280,6 +293,12 @@ export async function mockRequest<T>(
     return { success: true, data: { id, kycStatus: 'REJECTED' } } as T;
   }
 
+  if (endpoint.match(/^\/teller\/customers\/[\w-]+(\?|$)/) && method === 'GET' && !endpoint.includes('pending-kyc')) {
+    const id = endpoint.split('/')[3].split('?')[0];
+    const customer = MOCK_CUSTOMERS.find((c) => c.id === id) || MOCK_CUSTOMERS[0];
+    return { success: true, data: customer } as T;
+  }
+
   if (endpoint.startsWith('/teller/customers') && method === 'GET') {
     return { success: true, data: MOCK_CUSTOMERS } as T;
   }
@@ -300,7 +319,7 @@ export async function mockRequest<T>(
       success: true,
       data: {
         transaction: { reference: 'TXN' + Date.now() },
-        account: { balance: body.amount + 50000 },
+        account: { balance: Number(body.amount || 0) + 50000 },
       },
     } as T;
   }
@@ -310,9 +329,54 @@ export async function mockRequest<T>(
       success: true,
       data: {
         transaction: { reference: 'TXN' + Date.now() },
-        account: { balance: 50000 - body.amount },
+        account: { balance: 50000 - Number(body.amount || 0) },
       },
     } as T;
+  }
+
+  if ((endpoint === '/teller/loans/quote' || endpoint === '/manager/loans/quote') && method === 'POST') {
+    const principal = Number(body.principalAmount || 0);
+    const periods = Number(body.tenurePeriods || 1);
+    const upfrontFee = principal * 0.1;
+    const interest = principal * 0.1;
+    return {
+      success: true,
+      data: {
+        openingFee: 1000,
+        upfrontFee,
+        flatInterestAmount: interest,
+        totalRepayable: principal + interest,
+        installmentAmount: periods > 0 ? (principal + interest) / periods : principal + interest,
+        netDisbursement: principal - upfrontFee,
+      },
+    } as T;
+  }
+
+  if ((endpoint === '/teller/loans' || endpoint === '/manager/loans') && method === 'POST') {
+    const created = {
+      id: 'l-new',
+      loanNumber: 'LN' + Date.now(),
+      status: 'SUBMITTED',
+      principalAmount: Number(body.principalAmount || 0),
+      tenureMonths: Number(body.tenurePeriods || 0),
+      monthlyPayment: 0,
+      createdAt: new Date().toISOString(),
+      customer: { firstName: 'Walk-in', lastName: 'Applicant', phone: '', accounts: [] },
+      product: { name: 'Personal Micro Loan', code: 'PERS-001' },
+    };
+    return { success: true, data: created } as T;
+  }
+
+  if (endpoint.match(/\/teller\/loans\/[\w-]+$/) && method === 'GET' && !endpoint.includes('?')) {
+    const id = endpoint.split('/').pop()!;
+    const loan = MOCK_LOANS.find((l) => l.id === id) || MOCK_LOANS[0];
+    return { success: true, data: { ...loan, schedules: [], customer: loan.customer, product: loan.product } } as T;
+  }
+
+  if (endpoint.startsWith('/teller/loans') && method === 'GET') {
+    const status = new URLSearchParams(endpoint.split('?')[1] || '').get('status');
+    const data = status ? MOCK_LOANS.filter((l) => l.status === status) : MOCK_LOANS;
+    return { success: true, data } as T;
   }
 
   if (endpoint.startsWith('/manager/loans') && method === 'GET') {

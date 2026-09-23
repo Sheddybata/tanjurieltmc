@@ -3,9 +3,9 @@
     "short_name": "Tanjuriel TMC",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#FFFFFF",
+    "theme_color": "#0B5B3B",
+    "description": "Tanjuriel TMC mobile banking",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

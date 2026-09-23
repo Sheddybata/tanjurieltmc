@@ -4,7 +4,7 @@ import { SITE } from '@/lib/site-content';
 function AndroidLogo({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-      <path d="M17.6 9.48l1.84-3.18c.16-.28.06-.64-.22-.8-.28-.16-.64-.06-.8.22l-1.87 3.24a9.64 9.64 0 00-4.55 0L9.03 5.72a.589.589 0 00-.8-.22c-.28.16-.38.52-.22.8l1.84 3.18a8.18 8.18 0 00-3.17 2.54 8.2 8.2 0 0011.9 0 8.18 8.18 0 00-3.17-2.54zM12 19.8a6.6 6.6 0 01-4.24-1.54l4.24-2.46 4.24 2.46A6.6 6.6 0 0112 19.8zm6.68-7.18a6.57 6.57 0 01-1.05 2.12l-4.13-2.39V8.04l4.05 2.35a6.5 6.5 0 01.13 2.23zm-13.36 0a6.5 6.5 0 01.13-2.23l4.05-2.35v4.31l-4.13 2.39a6.57 6.57 0 01-1.05-2.12z" />
+      <path d="M17.523 15.341c-.551 0-.999-.448-.999-1s.448-.999.999-.999.999.448.999.999-.448 1-.999 1m-11.046 0c-.551 0-.999-.448-.999-1s.448-.999.999-.999.999.448.999.999-.448 1-.999 1m11.405-6.02l1.997-3.459a.416.416 0 00-.152-.568.416.416 0 00-.568.152l-2.022 3.503A9.88 9.88 0 0012 7.682c-1.853 0-3.59.562-5.137 1.748L4.841 5.927a.416.416 0 00-.568-.152.416.416 0 00-.152.568l1.997 3.459C2.689 11.187.343 14.659 0 18.761h24c-.343-4.102-2.689-7.574-6.118-9.44" />
     </svg>
   );
 }
@@ -39,17 +39,16 @@ export function AppDownloadButtons({ layout = 'row', className }: AppDownloadBut
         </div>
       </a>
 
-      <a
-        href={SITE.iosDownloadUrl}
-        download
-        className="inline-flex min-w-[220px] items-center gap-3 rounded-xl bg-gray-900 px-5 py-3.5 text-white shadow-sm transition hover:bg-gray-800 hover:shadow-md"
+      <div
+        aria-disabled="true"
+        className="inline-flex min-w-[220px] cursor-not-allowed items-center gap-3 rounded-xl bg-gray-200 px-5 py-3.5 text-gray-500"
       >
-        <AppleLogo className="h-8 w-8 shrink-0" />
+        <AppleLogo className="h-8 w-8 shrink-0 text-gray-400" />
         <div className="text-left">
-          <p className="text-[10px] font-medium uppercase tracking-wide text-white/70">Download for</p>
-          <p className="text-base font-semibold leading-tight">iOS</p>
+          <p className="text-[10px] font-medium uppercase tracking-wide text-gray-400">Coming soon</p>
+          <p className="text-base font-semibold leading-tight text-gray-600">iOS</p>
         </div>
-      </a>
+      </div>
     </div>
   );
 }
@@ -57,7 +56,7 @@ export function AppDownloadButtons({ layout = 'row', className }: AppDownloadBut
 export function AppDownloadNotice() {
   return (
     <p className="text-xs leading-relaxed text-gray-500">
-      Direct downloads are available while we prepare our Google Play and App Store listings.
+      The Android app is available to download now. The iOS build is coming soon.
       Only download from this official website.
     </p>
   );

@@ -4,6 +4,7 @@ import 'package:tanjuriel_microfinance/core/constants/app_constants.dart';
 import 'package:tanjuriel_microfinance/core/router/route_names.dart';
 import 'package:tanjuriel_microfinance/core/theme/app_colors.dart';
 import 'package:tanjuriel_microfinance/core/widgets/app_button.dart';
+import 'package:tanjuriel_microfinance/core/widgets/app_logo.dart';
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
@@ -18,15 +19,7 @@ class WelcomeScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Spacer(),
-              Container(
-                width: 72,
-                height: 72,
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                child: const Icon(Icons.account_balance, color: AppColors.primary, size: 40),
-              ),
+              const AppLogo(height: 120),
               const SizedBox(height: 32),
               Text(
                 'Welcome to\n${AppConstants.appName}',

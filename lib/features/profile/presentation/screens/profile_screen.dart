@@ -15,7 +15,10 @@ class ProfileScreen extends ConsumerWidget {
     final user = ref.watch(authProvider).user;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Profile')),
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        title: const Text('Profile'),
+      ),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [

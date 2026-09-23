@@ -10,6 +10,7 @@ import {
   Wallet,
 } from 'lucide-react';
 import { SavingsProductCard } from '@/components/public/savings-product-card';
+import { PhoneAppPreview } from '@/components/public/phone-app-preview';
 import { SITE, SAVINGS_PRODUCTS, LOAN_PRODUCTS, VALUES, HOMEPAGE_STATS } from '@/lib/site-content';
 import { MissionVisionCards } from '@/components/public/mission-vision-cards';
 import { formatCurrency } from '@/lib/utils';
@@ -235,19 +236,23 @@ export default function HomePage() {
 
       {/* App CTA */}
       <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
-        <div className="rounded-2xl border border-brand-100 bg-gradient-to-br from-brand-50 to-white p-8 text-center lg:p-14">
-          <Smartphone className="mx-auto h-12 w-12 text-brand-600" />
-          <h2 className="mt-6 font-display text-3xl font-bold text-gray-900">Bank from your phone</h2>
-          <p className="mx-auto mt-4 max-w-lg text-gray-600">
-            Check balances, save daily, apply for loans, and pay bills — all in the Tanjuriel mobile app.
-          </p>
-          <Link
-            href="/app"
-            className="mt-8 inline-flex items-center gap-2 rounded-xl bg-brand-600 px-8 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700"
-          >
-            Get the app
-            <ArrowRight className="h-4 w-4" />
-          </Link>
+        <div className="overflow-hidden rounded-2xl border border-brand-100 bg-gradient-to-br from-brand-50 to-white">
+          <div className="grid items-center gap-10 px-8 py-10 lg:grid-cols-2 lg:px-14 lg:py-12">
+            <div className="text-center lg:text-left">
+              <h2 className="font-display text-3xl font-bold text-gray-900">Bank from your phone</h2>
+              <p className="mx-auto mt-4 max-w-lg text-gray-600 lg:mx-0">
+                Check balances, save daily, apply for loans, and pay bills — all in the Tanjuriel mobile app.
+              </p>
+              <Link
+                href="/app"
+                className="mt-8 inline-flex items-center gap-2 rounded-xl bg-brand-600 px-8 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700"
+              >
+                Get the app
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+            <PhoneAppPreview />
+          </div>
         </div>
       </section>
     </>

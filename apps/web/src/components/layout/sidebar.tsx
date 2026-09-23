@@ -6,7 +6,9 @@ import Link from 'next/link';
 
 import { usePathname } from 'next/navigation';
 
-import { LogOut, Landmark } from 'lucide-react';
+import { LogOut } from 'lucide-react';
+
+import { BrandLogo } from '@/components/brand-logo';
 
 import { useAuth } from '@/lib/auth-context';
 
@@ -38,21 +40,11 @@ export function Sidebar() {
 
     <aside className="fixed inset-y-0 left-0 z-30 flex w-64 flex-col border-r border-gray-200 bg-white">
 
-      <div className="flex h-16 items-center gap-3 border-b border-gray-100 px-5">
+      <div className="flex h-20 items-center gap-3 border-b border-gray-100 px-5">
 
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-600 shadow-sm">
+        <BrandLogo height={52} />
 
-          <Landmark className="h-5 w-5 text-white" />
-
-        </div>
-
-        <div>
-
-          <p className="font-display text-sm font-bold text-gray-900">Tanjuriel</p>
-
-          <p className="text-xs text-gray-500">Operations console</p>
-
-        </div>
+        <p className="text-xs text-gray-500">Operations console</p>
 
       </div>
 

@@ -35,9 +35,23 @@ import {
 
 interface Props {
   initialCustomerId?: string;
+  customersPath?: string;
+  customerPath?: (id: string) => string;
+  quotePath?: string;
+  submitPath?: string;
+  successPath?: (loanId: string) => string;
+  submitHint?: string;
 }
 
-export function LoanApplicationWizard({ initialCustomerId = '' }: Props) {
+export function LoanApplicationWizard({
+  initialCustomerId = '',
+  customersPath = '/manager/customers?limit=100',
+  customerPath = (id) => `/manager/customers/${id}`,
+  quotePath = '/manager/loans/quote',
+  submitPath = '/manager/loans',
+  successPath = (id) => `/manager/loans/${id}`,
+  submitHint = 'Submitting creates the same loan record as a mobile application. The member will see it in the app; you can review it in the approval queue.',
+}: Props) {
   const router = useRouter();
   const photoRef = useRef<HTMLInputElement>(null);
   const [step, setStep] = useState(0);
@@ -75,15 +89,15 @@ export function LoanApplicationWizard({ initialCustomerId = '' }: Props) {
   const [photoName, setPhotoName] = useState('');
 
   useEffect(() => {
-    api.get<{ success: boolean; data: CustomerPrefill[] }>('/manager/customers?limit=100')
+    api.get<{ success: boolean; data: CustomerPrefill[] }>(customersPath)
       .then((res) => setCustomers(res.data))
       .catch(() => setCustomers([]));
-  }, []);
+  }, [customersPath]);
 
   const prefillCustomer = useCallback(async (id: string) => {
     if (!id) return;
     try {
-      const res = await api.get<{ success: boolean; data: CustomerPrefill }>(`/manager/customers/${id}`);
+      const res = await api.get<{ success: boolean; data: CustomerPrefill }>(customerPath(id));
       const c = res.data;
       setFullName(`${c.firstName} ${c.lastName}`.trim());
       if (c.gender) setGender(c.gender);
@@ -97,7 +111,7 @@ export function LoanApplicationWizard({ initialCustomerId = '' }: Props) {
     } catch {
       /* optional prefill */
     }
-  }, []);
+  }, [customerPath]);
 
   useEffect(() => {
     setCustomerId(initialCustomerId);
@@ -118,7 +132,7 @@ export function LoanApplicationWizard({ initialCustomerId = '' }: Props) {
       return;
     }
     try {
-      const res = await api.post<{ success: boolean; data: LoanQuote }>('/manager/loans/quote', {
+      const res = await api.post<{ success: boolean; data: LoanQuote }>(quotePath, {
         principalAmount: principal,
         tenurePeriods: periods,
         repaymentPlan,
@@ -226,8 +240,8 @@ export function LoanApplicationWizard({ initialCustomerId = '' }: Props) {
     form.set('collateralPhoto', photo);
 
     try {
-      const res = await api.post<{ success: boolean; data: { id: string; loanNumber: string } }>('/manager/loans', form);
-      router.push(`/manager/loans/${res.data.id}`);
+      const res = await api.post<{ success: boolean; data: { id: string; loanNumber: string } }>(submitPath, form);
+      router.push(successPath(res.data.id));
     } catch (e: unknown) {
       setError((e as { message?: string })?.message || 'Application failed');
     } finally {
@@ -425,9 +439,7 @@ export function LoanApplicationWizard({ initialCustomerId = '' }: Props) {
             <div><dt className="text-gray-500">Repayment</dt><dd>{repaymentPlanLabel(repaymentPlan)}</dd></div>
           </dl>
           {displayQuote && <QuoteCard quote={displayQuote} repaymentPlan={repaymentPlan} periods={periods} />}
-          <p className="text-xs text-gray-500">
-            Submitting creates the same loan record as a mobile application. The member will see it in the app; you can review it in the approval queue.
-          </p>
+          <p className="text-xs text-gray-500">{submitHint}</p>
         </div>
       )}
 

@@ -13,6 +13,13 @@ export class UsersService {
     if (dto.role !== UserRole.TELLER && dto.role !== UserRole.MANAGER) {
       throw new BadRequestException('Only teller and manager accounts can be created here');
     }
+    if (!dto.branchId) {
+      throw new BadRequestException('Branch is required for teller and manager accounts');
+    }
+    const branch = await this.prisma.branch.findFirst({
+      where: { id: dto.branchId, isActive: true },
+    });
+    if (!branch) throw new BadRequestException('Invalid or inactive branch');
     const existing = await this.prisma.user.findFirst({
       where: { OR: [{ email: dto.email.toLowerCase() }, { employeeId: dto.employeeId }] },
     });

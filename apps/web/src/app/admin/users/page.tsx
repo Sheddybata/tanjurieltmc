@@ -12,6 +12,12 @@ import { ROLE_COLORS, ROLE_LABELS } from '@/lib/navigation';
 import { UserRole } from '@tanjuriel/shared';
 import { useToast } from '@/components/ui/toast-provider';
 
+interface BranchOption {
+  id: string;
+  code: string;
+  name: string;
+}
+
 interface SystemUser {
   id: string;
   employeeId: string;
@@ -20,29 +26,49 @@ interface SystemUser {
   lastName: string;
   role: string;
   status: string;
-  branch?: { name: string };
+  branchId?: string | null;
+  branch?: { id: string; name: string };
 }
 
 const STAFF_ROLES = [UserRole.TELLER, UserRole.MANAGER];
 
+const emptyCreateForm = {
+  employeeId: '',
+  email: '',
+  password: '',
+  firstName: '',
+  lastName: '',
+  phone: '',
+  role: UserRole.TELLER,
+  branchId: '',
+};
+
 export default function UsersAdminPage() {
   const { showToast } = useToast();
   const [users, setUsers] = useState<SystemUser[]>([]);
+  const [branches, setBranches] = useState<BranchOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [resetUserId, setResetUserId] = useState<string | null>(null);
   const [newPassword, setNewPassword] = useState('');
   const [resetting, setResetting] = useState(false);
-  const [createForm, setCreateForm] = useState({
-    employeeId: '',
-    email: '',
-    password: '',
-    firstName: '',
-    lastName: '',
-    phone: '',
-    role: UserRole.TELLER,
-  });
+  const [assigningBranchUserId, setAssigningBranchUserId] = useState<string | null>(null);
+  const [assignBranchId, setAssignBranchId] = useState('');
+  const [createForm, setCreateForm] = useState(emptyCreateForm);
+
+  async function loadBranches() {
+    try {
+      const res = await api.get<{ success: boolean; data: BranchOption[] }>('/reporting/branches');
+      const list = res.data ?? [];
+      setBranches(list);
+      if (list.length === 1) {
+        setCreateForm((f) => (f.branchId ? f : { ...f, branchId: list[0].id }));
+      }
+    } catch {
+      showToast('Could not load branches', 'error');
+    }
+  }
 
   async function loadUsers() {
     setLoading(true);
@@ -57,11 +83,16 @@ export default function UsersAdminPage() {
   }
 
   useEffect(() => {
+    loadBranches();
     loadUsers();
   }, []);
 
   async function handleCreate(e: FormEvent) {
     e.preventDefault();
+    if (!createForm.branchId) {
+      showToast('Select a branch for this staff member', 'error');
+      return;
+    }
     setCreating(true);
     try {
       await api.post('/users', {
@@ -70,20 +101,28 @@ export default function UsersAdminPage() {
       });
       showToast('Staff account created', 'success');
       setShowCreate(false);
-      setCreateForm({
-        employeeId: '',
-        email: '',
-        password: '',
-        firstName: '',
-        lastName: '',
-        phone: '',
-        role: UserRole.TELLER,
-      });
+      setCreateForm({ ...emptyCreateForm, branchId: branches.length === 1 ? branches[0].id : '' });
       await loadUsers();
     } catch (err: unknown) {
       showToast((err as { message?: string })?.message || 'Could not create user', 'error');
     } finally {
       setCreating(false);
+    }
+  }
+
+  async function saveBranchAssignment(userId: string) {
+    if (!assignBranchId) {
+      showToast('Select a branch', 'error');
+      return;
+    }
+    try {
+      await api.patch(`/users/${userId}`, { branchId: assignBranchId });
+      showToast('Branch assigned — teller can register customers after signing in again', 'success');
+      setAssigningBranchUserId(null);
+      setAssignBranchId('');
+      await loadUsers();
+    } catch (err: unknown) {
+      showToast((err as { message?: string })?.message || 'Could not assign branch', 'error');
     }
   }
 
@@ -117,9 +156,17 @@ export default function UsersAdminPage() {
     }
   }
 
+  const branchOptions = [
+    { value: '', label: branches.length ? 'Select branch…' : 'No branches available' },
+    ...branches.map((b) => ({ value: b.id, label: `${b.name} (${b.code})` })),
+  ];
+
   return (
     <DashboardLayout>
-      <Header title="User Management" subtitle="Create teller and manager accounts, revoke login, reset passwords" />
+      <Header
+        title="User Management"
+        subtitle="Create teller and manager accounts with a branch — required for customer registration"
+      />
       <div className="space-y-6 p-8">
         <Card className="p-6">
           <div className="mb-4 flex items-center justify-between">
@@ -167,6 +214,13 @@ export default function UsersAdminPage() {
                 onChange={(e) => setCreateForm({ ...createForm, role: e.target.value as UserRole })}
                 options={STAFF_ROLES.map((r) => ({ value: r, label: ROLE_LABELS[r] }))}
               />
+              <Select
+                label="Branch"
+                value={createForm.branchId}
+                onChange={(e) => setCreateForm({ ...createForm, branchId: e.target.value })}
+                options={branchOptions}
+                required
+              />
               <Input
                 label="Permanent password"
                 type="password"
@@ -175,8 +229,10 @@ export default function UsersAdminPage() {
                 minLength={8}
                 required
               />
-              <div className="flex items-end">
-                <Button type="submit" loading={creating}>Create account</Button>
+              <div className="flex items-end md:col-span-2">
+                <Button type="submit" loading={creating} disabled={!branches.length}>
+                  Create account
+                </Button>
               </div>
             </form>
           )}
@@ -224,12 +280,51 @@ export default function UsersAdminPage() {
                       <td className="py-3 pr-4">
                         <span className={ROLE_COLORS[u.role as UserRole]}>{ROLE_LABELS[u.role as UserRole]}</span>
                       </td>
-                      <td className="py-3 pr-4 text-gray-600">{u.branch?.name || '—'}</td>
+                      <td className="py-3 pr-4 text-gray-600">
+                        {assigningBranchUserId === u.id ? (
+                          <div className="flex min-w-[200px] flex-col gap-2">
+                            <Select
+                              value={assignBranchId}
+                              onChange={(e) => setAssignBranchId(e.target.value)}
+                              options={branchOptions}
+                            />
+                            <div className="flex gap-2">
+                              <Button type="button" size="sm" onClick={() => saveBranchAssignment(u.id)}>
+                                Save
+                              </Button>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="secondary"
+                                onClick={() => { setAssigningBranchUserId(null); setAssignBranchId(''); }}
+                              >
+                                Cancel
+                              </Button>
+                            </div>
+                          </div>
+                        ) : u.branch?.name ? (
+                          u.branch.name
+                        ) : (
+                          <span className="text-amber-700">Not assigned</span>
+                        )}
+                      </td>
                       <td className="py-3 pr-4">
                         <span className={u.status === 'ACTIVE' ? 'badge-success' : 'badge-neutral'}>{u.status}</span>
                       </td>
                       <td className="py-3">
                         <div className="flex flex-wrap gap-2">
+                          {!u.branch?.name && assigningBranchUserId !== u.id && (
+                            <button
+                              type="button"
+                              className="text-xs font-medium text-brand-600 hover:underline"
+                              onClick={() => {
+                                setAssigningBranchUserId(u.id);
+                                setAssignBranchId(branches[0]?.id ?? '');
+                              }}
+                            >
+                              Assign branch
+                            </button>
+                          )}
                           <button
                             type="button"
                             className="text-xs text-brand-600 hover:underline"

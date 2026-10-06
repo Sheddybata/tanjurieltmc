@@ -36,10 +36,9 @@ export class CreateUserDto {
   @IsEnum(UserRole)
   role: UserRole;
 
-  @ApiPropertyOptional()
-  @IsOptional()
+  @ApiProperty()
   @IsEntityId()
-  branchId?: string;
+  branchId: string;
 }
 
 export class UpdateUserDto {

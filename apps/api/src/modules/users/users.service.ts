@@ -19,9 +19,10 @@ export class UsersService {
     if (existing) throw new ConflictException('Email or employee ID already exists');
 
     const passwordHash = await bcrypt.hash(dto.password, 12);
+    const { password: _password, ...userData } = dto;
     const user = await this.prisma.user.create({
       data: {
-        ...dto,
+        ...userData,
         email: dto.email.toLowerCase(),
         passwordHash,
       },

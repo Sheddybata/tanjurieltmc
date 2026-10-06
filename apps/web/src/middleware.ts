@@ -26,6 +26,14 @@ export function middleware(request: NextRequest) {
     }
 
     if (isPublicMarketingRoute(pathname)) {
+      // Avoid cross-origin redirect on Next.js RSC prefetch (breaks CORS preflight).
+      const isRscFetch =
+        request.headers.get('RSC') === '1' ||
+        request.headers.get('Next-Router-Prefetch') === '1' ||
+        request.headers.get('Purpose') === 'prefetch';
+      if (isRscFetch) {
+        return new NextResponse(null, { status: 404 });
+      }
       return NextResponse.redirect(new URL(pathname, DOMAINS.publicSite));
     }
 

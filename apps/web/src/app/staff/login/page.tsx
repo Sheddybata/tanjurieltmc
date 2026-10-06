@@ -157,9 +157,9 @@ export default function StaffLoginPage() {
 
             <p className="mt-8 text-center text-sm text-gray-500">
               Looking for customer banking?{' '}
-              <Link href="/app" className="font-medium text-brand-600 hover:text-brand-700">
+              <a href={publicSiteUrl('/app')} className="font-medium text-brand-600 hover:text-brand-700">
                 Download the app
-              </Link>
+              </a>
             </p>
           </div>
         </div>

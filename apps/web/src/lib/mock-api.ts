@@ -300,7 +300,27 @@ export async function mockRequest<T>(
   }
 
   if (endpoint.startsWith('/teller/customers') && method === 'GET') {
-    return { success: true, data: MOCK_CUSTOMERS } as T;
+    const qs = endpoint.includes('?') ? new URLSearchParams(endpoint.split('?')[1]) : new URLSearchParams();
+    const page = Math.max(1, Number(qs.get('page') || 1));
+    const limit = Math.min(100, Math.max(1, Number(qs.get('limit') || 20)));
+    const query = (qs.get('query') || '').toLowerCase();
+    let list = MOCK_CUSTOMERS;
+    if (query) {
+      list = list.filter(
+        (c) =>
+          `${c.firstName} ${c.lastName}`.toLowerCase().includes(query) ||
+          c.phone.includes(query) ||
+          c.customerNumber.toLowerCase().includes(query),
+      );
+    }
+    const total = list.length;
+    const start = (page - 1) * limit;
+    const data = list.slice(start, start + limit);
+    return {
+      success: true,
+      data,
+      meta: { page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) },
+    } as T;
   }
 
   if (endpoint === '/teller/customers' && method === 'POST') {

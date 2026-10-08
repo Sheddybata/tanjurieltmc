@@ -34,7 +34,7 @@ export function generateTransactionReportPdf(
     doc.text(`Generated: ${meta.generatedAt.toISOString().slice(0, 16).replace('T', ' ')} UTC`, { align: 'center' });
     doc.moveDown();
 
-    const headers = ['Date', 'Reference', 'Customer', 'Member ID', 'Account', 'Type', 'Amount', 'Channel', 'Status', 'Branch'];
+    const headers = ['Date', 'Reference', 'Customer', 'Account number', 'Account', 'Type', 'Amount', 'Channel', 'Status', 'Branch'];
     const colWidths = [58, 72, 80, 68, 72, 52, 58, 48, 52, 60];
     let y = doc.y;
     let x = doc.page.margins.left;

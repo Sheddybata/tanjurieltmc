@@ -1,16 +1,13 @@
 type AccountLike = { accountNumber: string; type?: string };
 
-/** Public member ID — primary Savings account number, or first account, or phone fallback. */
-export function primaryMemberAccountNumber(
-  accounts: AccountLike[] | undefined,
-  phone?: string,
-): string {
-  if (accounts?.length) {
-    const savings = accounts.find((a) => a.type === 'SAVINGS');
-    if (savings) return savings.accountNumber;
-    return accounts[0].accountNumber;
-  }
-  return phone ?? '—';
+const PRIMARY_SAVINGS = 'SAVINGS';
+
+/** Primary Savings account number for display (never phone). */
+export function primaryMemberAccountNumber(accounts: AccountLike[] | undefined): string {
+  if (!accounts?.length) return '—';
+  const savings = accounts.find((a) => a.type === PRIMARY_SAVINGS);
+  if (savings) return savings.accountNumber;
+  return '—';
 }
 
 export function formatCustomerOptionLabel(
@@ -19,6 +16,7 @@ export function formatCustomerOptionLabel(
   accounts: AccountLike[] | undefined,
   phone: string,
 ): string {
-  const memberId = primaryMemberAccountNumber(accounts, phone);
-  return `${firstName} ${lastName} (${memberId})`;
+  const memberId = primaryMemberAccountNumber(accounts);
+  const idLabel = memberId === '—' ? 'no savings account' : memberId;
+  return `${firstName} ${lastName} · ${idLabel} · ${phone}`;
 }

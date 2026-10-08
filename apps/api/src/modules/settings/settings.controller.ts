@@ -1,8 +1,8 @@
-import { Body, Controller, Get, Param, Put, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Put, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { SettlementProvider } from '@tanjuriel/database';
-import { Permission } from '@tanjuriel/shared';
-import { Permissions } from '../../common/decorators/auth.decorators';
+import { JwtPayload, Permission } from '@tanjuriel/shared';
+import { Permissions, User } from '../../common/decorators/auth.decorators';
 import { JwtAuthGuard, PermissionsGuard, StaffGuard } from '../../common/guards/auth.guards';
 import { SettingsService } from './settings.service';
 import { UpdateSettlementAccountDto } from './dto/settings.dto';
@@ -30,6 +30,22 @@ export class SettingsController {
     @Body() dto: UpdateSettlementAccountDto,
   ) {
     const data = await this.settingsService.updateSettlementAccount(provider, dto);
+    return { success: true, data };
+  }
+
+  @Get('member-accounts/backfill-preview')
+  @Permissions(Permission.SYSTEM_SETTINGS)
+  @ApiOperation({ summary: 'Count customers missing a primary Savings account number' })
+  async previewMemberAccountBackfill() {
+    const data = await this.settingsService.previewMissingPrimarySavingsAccounts();
+    return { success: true, data };
+  }
+
+  @Post('member-accounts/backfill')
+  @Permissions(Permission.SYSTEM_SETTINGS)
+  @ApiOperation({ summary: 'Open Savings accounts for members who have none (one-time / repair)' })
+  async backfillMemberAccounts(@User() user: JwtPayload) {
+    const data = await this.settingsService.backfillMissingPrimarySavingsAccounts(user.sub);
     return { success: true, data };
   }
 }

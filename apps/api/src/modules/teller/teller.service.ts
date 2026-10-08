@@ -95,20 +95,43 @@ export class TellerService {
 
     const customerNumber = generateCustomerNumber();
     const pinHash = dto.pin ? await bcrypt.hash(dto.pin, 12) : undefined;
+    const accountNumber = generateAccountNumber();
 
-    const customer = await this.prisma.customer.create({
-      data: {
-        customerNumber,
-        paymentRef: generatePaymentRef(customerNumber),
-        ...customerProfileCreateData({ ...dto, phone, alternatePhone }, photoUrl),
-        pinHash,
-        appEnabled: Boolean(pinHash),
-        kycStatus: CustomerKycStatus.PENDING,
-        branchId: user.branchId,
-        registeredById: user.sub,
-        registrationSource: RegistrationSource.BRANCH,
-      },
-      include: { branch: true, registeredBy: { select: { firstName: true, lastName: true } } },
+    const customer = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.customer.create({
+        data: {
+          customerNumber,
+          paymentRef: generatePaymentRef(accountNumber),
+          ...customerProfileCreateData({ ...dto, phone, alternatePhone }, photoUrl),
+          pinHash,
+          appEnabled: Boolean(pinHash),
+          kycStatus: CustomerKycStatus.PENDING,
+          branchId: user.branchId!,
+          registeredById: user.sub,
+          registrationSource: RegistrationSource.BRANCH,
+        },
+      });
+
+      await tx.account.create({
+        data: {
+          accountNumber,
+          type: AccountType.SAVINGS,
+          status: AccountStatus.ACTIVE,
+          customerId: created.id,
+          branchId: user.branchId!,
+          openedById: user.sub,
+          openedAt: new Date(),
+        },
+      });
+
+      return tx.customer.findUniqueOrThrow({
+        where: { id: created.id },
+        include: {
+          branch: true,
+          registeredBy: { select: { firstName: true, lastName: true } },
+          accounts: { select: { id: true, accountNumber: true, type: true, status: true, balance: true } },
+        },
+      });
     });
 
     return customer;

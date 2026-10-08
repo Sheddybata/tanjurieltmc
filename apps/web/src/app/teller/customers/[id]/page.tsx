@@ -191,7 +191,11 @@ export default function CustomerDetailPage() {
     <DashboardLayout>
       <Header
         title={`${customer.firstName} ${customer.lastName}`}
-        subtitle={primaryMemberAccountNumber(customer.accounts, customer.phone)}
+        subtitle={
+          primaryMemberAccountNumber(customer.accounts) === '—'
+            ? 'No Savings account number yet'
+            : `Account number ${primaryMemberAccountNumber(customer.accounts)}`
+        }
       />
       <PageShell>
         <div className="mb-4">
@@ -202,7 +206,10 @@ export default function CustomerDetailPage() {
             <h2 className="mb-4 text-lg font-semibold">Member profile</h2>
             <CustomerBioCard customer={customer} />
             <dl className="mt-6 space-y-3 border-t border-gray-100 pt-4 text-sm">
-              <div><dt className="text-gray-500">Member ID</dt><dd className="font-mono">{primaryMemberAccountNumber(customer.accounts, customer.phone)}</dd></div>
+              <div>
+                <dt className="text-gray-500">Account number (Savings)</dt>
+                <dd className="font-mono">{primaryMemberAccountNumber(customer.accounts)}</dd>
+              </div>
               <div><dt className="text-gray-500">KYC</dt><dd><StatusBadge status={customer.kycStatus} /></dd></div>
               <div><dt className="text-gray-500">Mobile app</dt><dd>{customer.appEnabled ? 'Enabled' : 'Not enabled'}</dd></div>
               <div><dt className="text-gray-500">Registration</dt><dd>{customer.registrationSource || 'BRANCH'}</dd></div>

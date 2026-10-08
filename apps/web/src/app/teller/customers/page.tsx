@@ -139,7 +139,7 @@ function CustomersPageContent() {
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-gray-100 text-xs font-semibold uppercase tracking-wide text-gray-500">
-                  <th className="pb-3 pr-4">Member ID</th>
+                  <th className="pb-3 pr-4">Account number</th>
                   <th className="pb-3 pr-4">Name</th>
                   <th className="pb-3 pr-4">Phone</th>
                   <th className="pb-3 pr-4">KYC</th>
@@ -156,7 +156,7 @@ function CustomersPageContent() {
                   customers.map((c) => (
                     <tr key={c.id} className="border-b border-gray-50 hover:bg-gray-50/50">
                       <td className="py-3 pr-4 font-mono text-xs text-brand-600">
-                        {primaryMemberAccountNumber(c.accounts, c.phone)}
+                        {primaryMemberAccountNumber(c.accounts)}
                       </td>
                       <td className="py-3 pr-4 font-medium">
                         <Link href={`/teller/customers/${c.id}`} className="hover:text-brand-600 hover:underline">

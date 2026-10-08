@@ -144,7 +144,7 @@ export default function TellerLoanDetailPage() {
             </div>
             <dl className="grid gap-3 sm:grid-cols-2 text-sm">
               <div><dt className="text-gray-500">Customer</dt><dd>{loan.customer.firstName} {loan.customer.lastName}</dd></div>
-              <div><dt className="text-gray-500">Member ID</dt><dd className="font-mono">{primaryMemberAccountNumber(loan.customer.accounts, loan.customer.phone)}</dd></div>
+              <div><dt className="text-gray-500">Account number</dt><dd className="font-mono">{primaryMemberAccountNumber(loan.customer.accounts)}</dd></div>
               <div><dt className="text-gray-500">Loan type</dt><dd>{loan.loanCategory ? loanCategoryLabel(loan.loanCategory) : loan.product.name}</dd></div>
               <div><dt className="text-gray-500">Repayment</dt><dd>{loan.repaymentPlan ? repaymentPlanLabel(loan.repaymentPlan) : 'Monthly'}</dd></div>
               <div><dt className="text-gray-500">Duration</dt><dd>{loan.tenurePeriods ? `${loan.tenurePeriods} periods (${loan.tenureMonths} mo equiv.)` : `${loan.tenureMonths} months`}</dd></div>

@@ -224,7 +224,7 @@ export default function LoansPage() {
                         <p className="font-medium text-gray-900">{loan.customer.firstName} {loan.customer.lastName}</p>
 
                         <p className="text-xs font-mono text-gray-400">
-                          {primaryMemberAccountNumber(loan.customer.accounts, loan.customer.phone)}
+                          {primaryMemberAccountNumber(loan.customer.accounts)}
                         </p>
 
                       </td>

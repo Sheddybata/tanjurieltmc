@@ -120,7 +120,7 @@ export default function LoanRepaymentsPage() {
 
           {customer && (
             <p className="mb-4 text-sm text-gray-700">
-              {customer.firstName} {customer.lastName} · {primaryMemberAccountNumber(customer.accounts, customer.phone)}
+              {customer.firstName} {customer.lastName} · {primaryMemberAccountNumber(customer.accounts)} · {customer.phone}
             </p>
           )}
 

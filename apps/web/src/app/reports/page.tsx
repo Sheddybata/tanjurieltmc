@@ -152,7 +152,7 @@ export default function ReportsPage() {
                     <th className="px-4 py-3">Date</th>
                     <th className="px-4 py-3">Reference</th>
                     <th className="px-4 py-3">Customer</th>
-                    <th className="px-4 py-3">Member ID</th>
+                    <th className="px-4 py-3">Account number</th>
                     <th className="px-4 py-3">Account</th>
                     <th className="px-4 py-3">Type</th>
                     <th className="px-4 py-3">Amount</th>

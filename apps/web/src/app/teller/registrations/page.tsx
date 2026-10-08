@@ -136,10 +136,10 @@ export default function RegistrationsPage() {
 
                     <div className="grid gap-1 sm:grid-cols-2">
                       <DetailField
-                        label="Member ID"
+                        label="Account number"
                         value={
                           <span className="font-mono text-xs">
-                            {primaryMemberAccountNumber(selected.accounts, selected.phone)}
+                            {primaryMemberAccountNumber(selected.accounts)}
                           </span>
                         }
                       />

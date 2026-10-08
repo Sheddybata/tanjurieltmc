@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import {
   AccountStatus,
   AccountType,
@@ -10,6 +10,7 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 import {
   customerProfileCreateData,
   normalizePhone,
+  throwIfCustomerIdentityTaken,
 } from '../../common/utils/customer-profile.util';
 import {
   generateAccountNumber,
@@ -37,9 +38,17 @@ export async function registerMobileCustomer(
     where: {
       OR: [{ phone }, { bvn: dto.bvn }, { nin: dto.nin }],
     },
+    select: {
+      phone: true,
+      bvn: true,
+      nin: true,
+      firstName: true,
+      lastName: true,
+      customerNumber: true,
+    },
   });
   if (existing) {
-    throw new ConflictException('Phone, BVN, or NIN is already registered');
+    throwIfCustomerIdentityTaken(existing, { phone, bvn: dto.bvn, nin: dto.nin });
   }
 
   const branch = await prisma.branch.findUnique({ where: { code: 'JOS001' } });

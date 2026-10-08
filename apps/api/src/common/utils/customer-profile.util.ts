@@ -1,3 +1,4 @@
+import { ConflictException } from '@nestjs/common';
 import {
   CustomerTitle,
   EmploymentStatus,
@@ -82,4 +83,43 @@ export function normalizePhone(phone: string): string {
   if (digits.startsWith('234')) return `0${digits.slice(3)}`;
   if (digits.startsWith('0')) return digits;
   return `0${digits}`;
+}
+
+type ExistingCustomerIdentity = {
+  phone: string;
+  bvn: string | null;
+  nin: string | null;
+  firstName?: string;
+  lastName?: string;
+  customerNumber?: string;
+};
+
+/** Throws a 409 with which identifier(s) collided and optional existing member hint. */
+export function throwIfCustomerIdentityTaken(
+  existing: ExistingCustomerIdentity,
+  input: { phone: string; bvn?: string | null; nin?: string | null },
+): void {
+  const taken: string[] = [];
+  if (existing.phone === input.phone) taken.push('phone number');
+  const bvn = input.bvn?.trim();
+  if (bvn && existing.bvn === bvn) taken.push('BVN');
+  const nin = input.nin?.trim();
+  if (nin && existing.nin === nin) taken.push('NIN');
+
+  if (taken.length === 0) {
+    throw new ConflictException('Phone, BVN, or NIN is already registered');
+  }
+
+  const memberHint =
+    existing.firstName && existing.lastName && existing.customerNumber
+      ? ` (existing member: ${existing.firstName} ${existing.lastName}, ${existing.customerNumber})`
+      : '';
+
+  if (taken.length === 1) {
+    throw new ConflictException(`This ${taken[0]} is already registered${memberHint}.`);
+  }
+  const last = taken.pop()!;
+  throw new ConflictException(
+    `This ${taken.join(', ')} and ${last} are already registered${memberHint}.`,
+  );
 }

@@ -6,8 +6,6 @@ import {
 
   BadRequestException,
 
-  ConflictException,
-
   ForbiddenException,
 
 } from '@nestjs/common';
@@ -44,6 +42,7 @@ import {
 import {
   customerProfileCreateData,
   normalizePhone,
+  throwIfCustomerIdentityTaken,
 } from '../../common/utils/customer-profile.util';
 
 import * as bcrypt from 'bcryptjs';
@@ -81,9 +80,17 @@ export class TellerService {
           ...(dto.nin ? [{ nin: dto.nin }] : []),
         ],
       },
+      select: {
+        phone: true,
+        bvn: true,
+        nin: true,
+        firstName: true,
+        lastName: true,
+        customerNumber: true,
+      },
     });
     if (existing) {
-      throw new ConflictException('Phone, BVN, or NIN is already registered');
+      throwIfCustomerIdentityTaken(existing, { phone, bvn: dto.bvn, nin: dto.nin });
     }
 
     const customerNumber = generateCustomerNumber();

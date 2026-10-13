@@ -23,13 +23,18 @@ export const collateralPhotoStorage = diskStorage({
   },
 });
 
+const ALLOWED_IMAGE_EXT = new Set(['.jpg', '.jpeg', '.png', '.webp', '.heic', '.heif']);
+
 export function collateralPhotoFilter(
   _req: Express.Request,
   file: Express.Multer.File,
   cb: (error: Error | null, acceptFile: boolean) => void,
 ) {
-  if (!file.mimetype.startsWith('image/')) {
-    cb(new BadRequestException('Collateral photo must be an image') as unknown as Error, false);
+  const ext = extname(file.originalname).toLowerCase();
+  const mimeOk = file.mimetype.startsWith('image/');
+  const extOk = ALLOWED_IMAGE_EXT.has(ext);
+  if (!mimeOk && !extOk) {
+    cb(new BadRequestException('Collateral photo must be a JPG, PNG, or WEBP image') as unknown as Error, false);
     return;
   }
   cb(null, true);

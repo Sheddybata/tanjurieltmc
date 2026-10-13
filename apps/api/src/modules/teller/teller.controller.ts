@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Query, Patch, UseGuards, UploadedFile, UseInterceptors, Res } from '@nestjs/common';
+import { BadRequestException, Controller, Get, Post, Body, Param, Query, Patch, UseGuards, UploadedFile, UseInterceptors, Res } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiConsumes } from '@nestjs/swagger';
 import { Response } from 'express';
@@ -195,7 +195,12 @@ export class TellerController {
     @User() user: JwtPayload,
     @UploadedFile() collateralPhoto?: Express.Multer.File,
   ) {
-    const photoUrl = collateralPhoto ? collateralPhotoPublicPath(collateralPhoto.filename) : undefined;
+    if (!collateralPhoto) {
+      throw new BadRequestException(
+        'Collateral photo was not received. Use JPG or PNG under 5MB and try again.',
+      );
+    }
+    const photoUrl = collateralPhotoPublicPath(collateralPhoto.filename);
     const loan = await this.tellerService.createLoanApplication(dto, user, photoUrl);
     return { success: true, data: loan };
   }

@@ -55,7 +55,6 @@ export function LoanApplicationWizard({
   submitHint = 'Submitting creates the same loan record as a mobile application. The member will see it in the app; you can review it in the approval queue.',
 }: Props) {
   const router = useRouter();
-  const photoRef = useRef<HTMLInputElement>(null);
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -88,7 +87,17 @@ export function LoanApplicationWizard({
   const [guarantorName, setGuarantorName] = useState('');
   const [guarantorPhone, setGuarantorPhone] = useState('');
   const [contractAccepted, setContractAccepted] = useState(false);
-  const [photoName, setPhotoName] = useState('');
+  const [collateralPhoto, setCollateralPhoto] = useState<File | null>(null);
+  const collateralPhotoRef = useRef<File | null>(null);
+
+  function rememberCollateralPhoto(file: File | null) {
+    collateralPhotoRef.current = file;
+    setCollateralPhoto(file);
+  }
+
+  function resolvedCollateralPhoto(): File | null {
+    return collateralPhotoRef.current ?? collateralPhoto;
+  }
 
   useEffect(() => {
     api.get<{ success: boolean; data: CustomerPrefill[] }>(customersPath)
@@ -185,10 +194,15 @@ export function LoanApplicationWizard({
         if (!collateralValue.trim()) return 'Enter collateral value';
         if (!guarantorName.trim()) return 'Enter guarantor name';
         if (!guarantorPhone.trim()) return 'Enter guarantor phone';
-        if (!photoRef.current?.files?.[0]) return 'Attach collateral photo';
+        if (!resolvedCollateralPhoto()) return 'Attach collateral photo';
         return null;
       case 3:
         if (!contractAccepted) return 'You must agree to the contract';
+        return null;
+      case 4:
+        if (!resolvedCollateralPhoto()) {
+          return 'Collateral photo missing — go back to the Collateral step and attach it again';
+        }
         return null;
       default:
         return null;
@@ -212,7 +226,7 @@ export function LoanApplicationWizard({
   async function submit() {
     setLoading(true);
     setError('');
-    const photo = photoRef.current?.files?.[0];
+    const photo = resolvedCollateralPhoto();
     if (!photo) {
       setError('Collateral photo is required');
       setLoading(false);
@@ -220,32 +234,32 @@ export function LoanApplicationWizard({
     }
 
     const form = new FormData();
-    form.set('customerId', customerId);
-    form.set('applicantFullName', fullName.trim());
-    form.set('locationType', locationType);
-    form.set('applicantAddress', address.trim());
-    form.set('applicantGender', gender);
-    form.set('applicantDateOfBirth', dob);
-    form.set('educationLevel', education);
-    form.set('maritalStatus', marital);
-    form.set('businessActivities', JSON.stringify(businessActivities));
-    form.set('yearsOfExperience', yearsExp.trim());
-    if (unionName.trim()) form.set('unionName', unionName.trim());
-    form.set('nextOfKinName', nokName.trim());
-    form.set('nextOfKinPhone', nokPhone.trim());
-    form.set('nextOfKinAddress', nokAddress.trim());
-    form.set('loanCategory', loanCategory);
-    form.set('principalAmount', formatMoneyForApi(amount));
-    form.set('tenurePeriods', duration);
-    form.set('repaymentPlan', repaymentPlan);
-    form.set('contractAccepted', 'true');
-    if (purpose.trim()) form.set('purpose', purpose.trim());
-    form.set('collateral', collateral.trim());
-    form.set('collateralType', collateralType);
-    form.set('collateralEstimatedValue', formatMoneyForApi(collateralValue));
-    form.set('guarantorName', guarantorName.trim());
-    form.set('guarantorPhone', guarantorPhone.trim());
-    form.set('collateralPhoto', photo);
+    form.append('customerId', customerId);
+    form.append('applicantFullName', fullName.trim());
+    form.append('locationType', locationType);
+    form.append('applicantAddress', address.trim());
+    form.append('applicantGender', gender);
+    form.append('applicantDateOfBirth', dob);
+    form.append('educationLevel', education);
+    form.append('maritalStatus', marital);
+    form.append('businessActivities', JSON.stringify(businessActivities));
+    form.append('yearsOfExperience', yearsExp.trim());
+    if (unionName.trim()) form.append('unionName', unionName.trim());
+    form.append('nextOfKinName', nokName.trim());
+    form.append('nextOfKinPhone', nokPhone.trim());
+    form.append('nextOfKinAddress', nokAddress.trim());
+    form.append('loanCategory', loanCategory);
+    form.append('principalAmount', formatMoneyForApi(amount));
+    form.append('tenurePeriods', duration);
+    form.append('repaymentPlan', repaymentPlan);
+    form.append('contractAccepted', 'true');
+    if (purpose.trim()) form.append('purpose', purpose.trim());
+    form.append('collateral', collateral.trim());
+    form.append('collateralType', collateralType);
+    form.append('collateralEstimatedValue', formatMoneyForApi(collateralValue));
+    form.append('guarantorName', guarantorName.trim());
+    form.append('guarantorPhone', guarantorPhone.trim());
+    form.append('collateralPhoto', photo, photo.name);
 
     try {
       const res = await api.post<{ success: boolean; data: { id: string; loanNumber: string } }>(submitPath, form);
@@ -397,8 +411,7 @@ export function LoanApplicationWizard({
         </div>
       )}
 
-      {step === 2 && (
-        <div className="space-y-4">
+      <div className={step === 2 ? 'space-y-4' : 'hidden'} aria-hidden={step !== 2}>
           <Select
             label="Collateral type"
             value={collateralType}
@@ -410,19 +423,21 @@ export function LoanApplicationWizard({
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700">Collateral photo (required)</label>
             <input
-              ref={photoRef}
               type="file"
-              accept="image/jpeg,image/png,image/webp"
+              accept="image/jpeg,image/png,image/webp,image/*"
               className="block w-full text-sm file:mr-3 file:rounded-md file:border-0 file:bg-brand-50 file:px-3 file:py-2 file:text-sm file:font-medium file:text-brand-700"
-              onChange={(e) => setPhotoName(e.target.files?.[0]?.name ?? '')}
+              onChange={(e) => rememberCollateralPhoto(e.target.files?.[0] ?? null)}
             />
-            {photoName && <p className="mt-1 text-xs text-gray-500">{photoName}</p>}
+            {resolvedCollateralPhoto() && (
+              <p className="mt-1 text-xs text-emerald-700">
+                Attached: {resolvedCollateralPhoto()!.name}
+              </p>
+            )}
           </div>
           <p className="text-sm font-medium text-gray-800">Guarantor</p>
           <Input label="Guarantor name" required value={guarantorName} onChange={(e) => setGuarantorName(e.target.value)} />
           <Input label="Guarantor phone" required value={guarantorPhone} onChange={(e) => setGuarantorPhone(e.target.value)} />
-        </div>
-      )}
+      </div>
 
       {step === 3 && (
         <div className="space-y-4">
@@ -451,6 +466,7 @@ export function LoanApplicationWizard({
             <div><dt className="text-gray-500">Amount</dt><dd>{formatCurrency(principal)}</dd></div>
             <div><dt className="text-gray-500">Duration</dt><dd>{duration} {repaymentPeriodUnit(repaymentPlan)}</dd></div>
             <div><dt className="text-gray-500">Repayment</dt><dd>{repaymentPlanLabel(repaymentPlan)}</dd></div>
+            <div><dt className="text-gray-500">Collateral photo</dt><dd>{resolvedCollateralPhoto()?.name ?? '—'}</dd></div>
           </dl>
           {displayQuote && <QuoteCard quote={displayQuote} repaymentPlan={repaymentPlan} periods={periods} />}
           <p className="text-xs text-gray-500">{submitHint}</p>

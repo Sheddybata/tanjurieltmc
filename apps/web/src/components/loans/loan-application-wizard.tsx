@@ -33,6 +33,8 @@ import {
   type LoanQuote,
 } from '@/lib/loan-application-options';
 
+const defaultManagerCustomerPath = (id: string) => `/manager/customers/${id}`;
+
 interface Props {
   initialCustomerId?: string;
   customersPath?: string;
@@ -45,8 +47,8 @@ interface Props {
 
 export function LoanApplicationWizard({
   initialCustomerId = '',
-  customersPath = '/manager/customers?limit=100',
-  customerPath = (id) => `/manager/customers/${id}`,
+  customersPath = '/manager/customers?limit=200',
+  customerPath = defaultManagerCustomerPath,
   quotePath = '/manager/loans/quote',
   submitPath = '/manager/loans',
   successPath = (id) => `/manager/loans/${id}`,
@@ -94,10 +96,13 @@ export function LoanApplicationWizard({
       .catch(() => setCustomers([]));
   }, [customersPath]);
 
+  const customerPathRef = useRef(customerPath);
+  customerPathRef.current = customerPath;
+
   const prefillCustomer = useCallback(async (id: string) => {
     if (!id) return;
     try {
-      const res = await api.get<{ success: boolean; data: CustomerPrefill }>(customerPath(id));
+      const res = await api.get<{ success: boolean; data: CustomerPrefill }>(customerPathRef.current(id));
       const c = res.data;
       setFullName(`${c.firstName} ${c.lastName}`.trim());
       if (c.gender) setGender(c.gender);
@@ -111,15 +116,18 @@ export function LoanApplicationWizard({
     } catch {
       /* optional prefill */
     }
-  }, [customerPath]);
+  }, []);
+
+  // URL ?customerId= only — never clear a customer chosen from the dropdown.
+  useEffect(() => {
+    if (initialCustomerId) {
+      setCustomerId(initialCustomerId);
+    }
+  }, [initialCustomerId]);
 
   useEffect(() => {
-    setCustomerId(initialCustomerId);
-    if (initialCustomerId) prefillCustomer(initialCustomerId);
-  }, [initialCustomerId, prefillCustomer]);
-
-  useEffect(() => {
-    if (customerId) prefillCustomer(customerId);
+    if (!customerId) return;
+    prefillCustomer(customerId);
   }, [customerId, prefillCustomer]);
 
   const principal = Number(amount) || 0;
@@ -156,9 +164,9 @@ export function LoanApplicationWizard({
   }
 
   function validateStep(): string | null {
+    if (!customerId) return 'Select a customer';
     switch (step) {
       case 0:
-        if (!customerId) return 'Select a customer';
         if (!fullName.trim()) return 'Enter full name';
         if (!address.trim()) return 'Enter address';
         if (!dob) return 'Enter date of birth';
@@ -287,6 +295,9 @@ export function LoanApplicationWizard({
             onChange={(e) => setCustomerId(e.target.value)}
             options={[
               { value: '', label: customers.length ? 'Select customer…' : 'Loading customers…' },
+              ...(customerId && !customers.some((c) => c.id === customerId)
+                ? [{ value: customerId, label: fullName.trim() || 'Selected customer' }]
+                : []),
               ...customers.map((c) => ({
                 value: c.id,
                 label: formatCustomerOptionLabel(c.firstName, c.lastName, c.accounts, c.phone),
@@ -354,6 +365,9 @@ export function LoanApplicationWizard({
 
       {step === 1 && (
         <div className="space-y-4">
+          <p className="rounded-lg border border-gray-100 bg-gray-50 px-4 py-2 text-sm text-gray-700">
+            Customer: <span className="font-medium">{fullName || '—'}</span>
+          </p>
           <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
             Notice: loan account opening cost {formatCurrency(LOAN_OPENING_FEE)}
           </div>

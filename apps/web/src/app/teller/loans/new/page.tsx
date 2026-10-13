@@ -7,14 +7,16 @@ import { Header } from '@/components/layout/header';
 import { Card } from '@/components/ui/card';
 import { LoanApplicationWizard } from '@/components/loans/loan-application-wizard';
 
+const tellerCustomerDetailPath = (id: string) => `/teller/customers/${id}`;
+
 function NewLoanForm() {
   const searchParams = useSearchParams();
   const customerId = searchParams.get('customerId') ?? '';
   return (
     <LoanApplicationWizard
       initialCustomerId={customerId}
-      customersPath="/teller/customers?limit=100"
-      customerPath={(id) => `/teller/customers/${id}`}
+      customersPath="/teller/customers?limit=200"
+      customerPath={tellerCustomerDetailPath}
       quotePath="/teller/loans/quote"
       submitPath="/teller/loans"
       successPath={(id) => `/teller/loans/${id}`}

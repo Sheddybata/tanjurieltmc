@@ -222,13 +222,13 @@ async function main() {
 
   await prisma.loanProduct.upsert({
     where: { code: 'PERS-001' },
-    update: {},
+    update: { maxAmount: 2000000 },
       create: {
         code: 'PERS-001',
         name: 'Personal Micro Loan',
         description: 'Personal loans for salaried and self-employed clients',
         minAmount: 10000,
-        maxAmount: 500000,
+        maxAmount: 2000000,
         minTenureMonths: 1,
         maxTenureMonths: 12,
         interestRate: 0.03,

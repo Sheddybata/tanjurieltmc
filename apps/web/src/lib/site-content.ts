@@ -86,7 +86,7 @@ export const LOAN_PRODUCTS = [
     name: 'Personal Micro Loan',
     description: 'Flexible personal loans for salaried and self-employed clients who need quick access to funds.',
     minAmount: 10_000,
-    maxAmount: 500_000,
+    maxAmount: 2_000_000,
     minTenureMonths: 1,
     maxTenureMonths: 12,
     interestRate: 0.03,

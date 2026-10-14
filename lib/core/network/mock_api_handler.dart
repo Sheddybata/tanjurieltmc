@@ -73,7 +73,7 @@ class MockApiHandler {
         'name': 'Personal Micro Loan',
         'description': 'Personal loans for salaried and self-employed clients',
         'minAmount': 10000,
-        'maxAmount': 500000,
+        'maxAmount': 2000000,
         'minTenureMonths': 1,
         'maxTenureMonths': 12,
         'interestRate': 0.03,

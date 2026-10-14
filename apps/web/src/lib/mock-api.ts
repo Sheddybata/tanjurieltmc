@@ -358,7 +358,7 @@ export async function mockRequest<T>(
     const principal = Number(body.principalAmount || 0);
     const periods = Number(body.tenurePeriods || 1);
     const upfrontFee = principal * 0.1;
-    const interest = principal * 0.1;
+    const interest = principal * 0.03;
     return {
       success: true,
       data: {

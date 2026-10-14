@@ -7,6 +7,19 @@ import {
   ensurePrimarySavingsAccount,
   syncCustomerPaymentRefFromSavings,
 } from '../../common/utils/primary-savings-account.util';
+import { PLATFORM_SETTING_LOAN_FLAT_INTEREST_RATE } from '../../common/constants/platform-settings.constant';
+import { LOAN_FLAT_INTEREST_RATE } from '../../common/utils/loan-pricing.util';
+import {
+  allLoansForBulkRepriceWhere,
+  loanUsedLegacyFlatInterest,
+  previewLoanInterestReprice,
+  recalculateLoanWithFlatRate,
+  repriceableLoansWhere,
+} from '../../common/utils/loan-interest-recalculate.util';
+import {
+  RecalculateLoansInterestDto,
+  RecalculateSingleLoanDto,
+} from './dto/loan-pricing-settings.dto';
 
 @Injectable()
 export class SettingsService {
@@ -120,6 +133,137 @@ export class SettingsService {
       createdAccounts: created,
       skippedAccounts: skipped,
       failures: failed,
+    };
+  }
+
+  async getLoanFlatInterestRate(): Promise<number> {
+    try {
+      const row = await this.prisma.platformSetting.findUnique({
+        where: { key: PLATFORM_SETTING_LOAN_FLAT_INTEREST_RATE },
+      });
+      if (!row) return LOAN_FLAT_INTEREST_RATE;
+      const parsed = Number(row.value);
+      return Number.isFinite(parsed) ? parsed : LOAN_FLAT_INTEREST_RATE;
+    } catch {
+      return LOAN_FLAT_INTEREST_RATE;
+    }
+  }
+
+  async setLoanFlatInterestRate(rate: number) {
+    await this.prisma.platformSetting.upsert({
+      where: { key: PLATFORM_SETTING_LOAN_FLAT_INTEREST_RATE },
+      update: { value: String(rate) },
+      create: { key: PLATFORM_SETTING_LOAN_FLAT_INTEREST_RATE, value: String(rate) },
+    });
+    return { flatInterestRate: rate };
+  }
+
+  async getLoanPricingConfig() {
+    const flatInterestRate = await this.getLoanFlatInterestRate();
+    return { flatInterestRate };
+  }
+
+  previewLoanInterestReprice(applyToAllLoans = false, targetRate?: number) {
+    return this.getLoanFlatInterestRate().then((rate) =>
+      previewLoanInterestReprice(this.prisma, targetRate ?? rate, applyToAllLoans),
+    );
+  }
+
+  async recalculateLoansInterest(dto: RecalculateLoansInterestDto) {
+    const targetRate = dto.flatInterestRate ?? (await this.getLoanFlatInterestRate());
+    const where = dto.applyToAllLoans ? allLoansForBulkRepriceWhere() : repriceableLoansWhere();
+
+    const loans = await this.prisma.loan.findMany({
+      where,
+      select: {
+        id: true,
+        loanNumber: true,
+        principalAmount: true,
+        flatInterestAmount: true,
+        customer: { select: { firstName: true, lastName: true } },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    const updated: Array<{ loanNumber: string; name: string; newInterest: number }> = [];
+    const skipped: Array<{ loanNumber: string; reason: string }> = [];
+    const failed: Array<{ loanNumber: string; error: string }> = [];
+
+    for (const loan of loans) {
+      const principal = Number(loan.principalAmount);
+      const flat = loan.flatInterestAmount != null ? Number(loan.flatInterestAmount) : null;
+      if (!dto.force && !loanUsedLegacyFlatInterest(principal, flat, targetRate)) {
+        skipped.push({ loanNumber: loan.loanNumber, reason: 'Already at target rate' });
+        continue;
+      }
+
+      try {
+        const quote = await this.prisma.$transaction((tx) =>
+          recalculateLoanWithFlatRate(tx, loan.id, targetRate),
+        );
+        updated.push({
+          loanNumber: loan.loanNumber,
+          name: `${loan.customer.firstName} ${loan.customer.lastName}`.trim(),
+          newInterest: quote.flatInterestAmount,
+        });
+      } catch (err) {
+        failed.push({
+          loanNumber: loan.loanNumber,
+          error: err instanceof Error ? err.message : 'Could not recalculate',
+        });
+      }
+    }
+
+    return {
+      flatInterestRate: targetRate,
+      applyToAllLoans: Boolean(dto.applyToAllLoans),
+      scanned: loans.length,
+      updated: updated.length,
+      skipped: skipped.length,
+      failed: failed.length,
+      updatedLoans: updated,
+      skippedLoans: skipped.slice(0, 20),
+      failures: failed,
+    };
+  }
+
+  async recalculateSingleLoanInterest(dto: RecalculateSingleLoanDto) {
+    if (!dto.loanId && !dto.loanNumber?.trim()) {
+      throw new BadRequestException('Provide loanId or loanNumber');
+    }
+
+    const loan = await this.prisma.loan.findFirst({
+      where: dto.loanId
+        ? { id: dto.loanId }
+        : { loanNumber: dto.loanNumber!.trim() },
+      select: {
+        id: true,
+        loanNumber: true,
+        status: true,
+        principalAmount: true,
+        flatInterestAmount: true,
+        tenurePeriods: true,
+        repaymentPlan: true,
+        customer: { select: { firstName: true, lastName: true } },
+      },
+    });
+    if (!loan) throw new BadRequestException('Loan not found');
+    if (!loan.tenurePeriods || !loan.repaymentPlan) {
+      throw new BadRequestException('Loan cannot be repriced (missing tenure or repayment plan)');
+    }
+
+    const quote = await this.prisma.$transaction((tx) =>
+      recalculateLoanWithFlatRate(tx, loan.id, dto.flatInterestRate),
+    );
+
+    return {
+      loanNumber: loan.loanNumber,
+      status: loan.status,
+      customerName: `${loan.customer.firstName} ${loan.customer.lastName}`.trim(),
+      flatInterestRate: dto.flatInterestRate,
+      flatInterestAmount: quote.flatInterestAmount,
+      totalRepayable: quote.totalRepayable,
+      installmentAmount: quote.installmentAmount,
     };
   }
 }

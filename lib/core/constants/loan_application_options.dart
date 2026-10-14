@@ -24,7 +24,7 @@ class LoanApplicationOptions {
 
   static const openingFee = 1000;
   static const upfrontFeeRate = 0.10;
-  static const interestRate = 0.10;
+  static const interestRate = 0.03;
 
   static String locationLabel(String value) => switch (value) {
         'RURAL' => 'Rural',

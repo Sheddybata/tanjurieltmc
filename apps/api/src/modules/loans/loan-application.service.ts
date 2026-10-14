@@ -8,6 +8,7 @@ import {
 } from '../../common/utils/loan-pricing.util';
 import { generateLoanNumber } from '../../common/utils/reference.util';
 import { CustomerApplyLoanDto, CustomerLoanQuoteDto } from '../customer/dto/customer-loan.dto';
+import { SettingsService } from '../settings/settings.service';
 
 export type LoanApplicationSource = 'MOBILE' | 'BRANCH';
 
@@ -21,13 +22,18 @@ export interface CreateLoanApplicationInput {
 
 @Injectable()
 export class LoanApplicationService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private settingsService: SettingsService,
+  ) {}
 
-  quoteLoan(dto: CustomerLoanQuoteDto) {
+  async quoteLoan(dto: CustomerLoanQuoteDto) {
+    const flatInterestRate = await this.settingsService.getLoanFlatInterestRate();
     return calculateTanjuielLoanQuote({
       principalAmount: dto.principalAmount,
       tenurePeriods: dto.tenurePeriods,
       repaymentPlan: dto.repaymentPlan,
+      flatInterestRate,
     });
   }
 
@@ -57,10 +63,12 @@ export class LoanApplicationService {
       );
     }
 
+    const flatInterestRate = await this.settingsService.getLoanFlatInterestRate();
     const quote = calculateTanjuielLoanQuote({
       principalAmount: amount,
       tenurePeriods: dto.tenurePeriods,
       repaymentPlan: dto.repaymentPlan,
+      flatInterestRate,
     });
 
     if (quote.tenureMonths < product.minTenureMonths || quote.tenureMonths > product.maxTenureMonths) {

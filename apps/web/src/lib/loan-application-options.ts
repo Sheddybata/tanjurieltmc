@@ -1,6 +1,6 @@
 export const LOAN_OPENING_FEE = 1000;
 export const LOAN_UPFRONT_RATE = 0.1;
-export const LOAN_INTEREST_RATE = 0.1;
+export const LOAN_INTEREST_RATE = 0.03;
 
 export const LOCATION_TYPES = ['RURAL', 'URBAN', 'SEMI_URBAN'] as const;
 export const EDUCATION_LEVELS = ['QURANIC', 'PRIMARY', 'JUNIOR_SECONDARY', 'SENIOR_SECONDARY', 'TERTIARY'] as const;

@@ -753,6 +753,14 @@ model CustomerRefreshToken {
   @@map("customer_refresh_tokens")
 }
 
+model PlatformSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+
+  @@map("platform_settings")
+}
+
 model DailySnapshot {
   id                  String   @id @default(cuid())
   date                DateTime @unique @db.Date

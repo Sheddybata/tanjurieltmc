@@ -2,12 +2,14 @@ import { LoanRepaymentPlan } from '@tanjuriel/database';
 
 export const LOAN_OPENING_FEE_NGN = 1000;
 export const LOAN_UPFRONT_FEE_RATE = 0.1;
-export const LOAN_FLAT_INTEREST_RATE = 0.1;
+export const LOAN_FLAT_INTEREST_RATE = 0.03;
 
 export interface LoanQuoteInput {
   principalAmount: number;
   tenurePeriods: number;
   repaymentPlan: LoanRepaymentPlan;
+  /** Flat interest on principal (e.g. 0.03 = 3%). Defaults to LOAN_FLAT_INTEREST_RATE. */
+  flatInterestRate?: number;
 }
 
 export interface LoanQuoteScheduleItem {
@@ -57,7 +59,8 @@ export function calculateTanjuielLoanQuote(input: LoanQuoteInput): LoanQuoteResu
 
   const openingFee = LOAN_OPENING_FEE_NGN;
   const upfrontFee = roundMoney(principal * LOAN_UPFRONT_FEE_RATE);
-  const flatInterestAmount = roundMoney(principal * LOAN_FLAT_INTEREST_RATE);
+  const rate = input.flatInterestRate ?? LOAN_FLAT_INTEREST_RATE;
+  const flatInterestAmount = roundMoney(principal * rate);
   const totalRepayable = roundMoney(principal + flatInterestAmount);
   const installmentAmount = roundMoney(totalRepayable / periods);
   const netDisbursement = roundMoney(principal - upfrontFee);

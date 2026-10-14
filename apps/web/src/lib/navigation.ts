@@ -137,6 +137,8 @@ export const NAV_ITEMS: NavItem[] = [
 
   { label: 'Loan Products', href: '/admin/products', icon: CreditCard, roles: [UserRole.ADMIN], group: 'administration' },
 
+  { label: 'Loan interest', href: '/admin/loan-pricing', icon: Banknote, roles: [UserRole.ADMIN], group: 'administration' },
+
   { label: 'Settings', href: '/admin/settings', icon: Settings, roles: [UserRole.ADMIN], group: 'administration' },
 
 ];

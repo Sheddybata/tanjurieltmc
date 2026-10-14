@@ -612,7 +612,7 @@ class _ApplyLoanScreenState extends ConsumerState<ApplyLoanScreen> {
           const SizedBox(height: 8),
           _summaryRow('Opening fee', CurrencyFormatter.format((quote['openingFee'] as num?)?.toDouble() ?? 1000)),
           _summaryRow('Upfront fee (10%)', CurrencyFormatter.format((quote['upfrontFee'] as num?)?.toDouble() ?? 0)),
-          _summaryRow('Interest (10%)', CurrencyFormatter.format((quote['flatInterestAmount'] as num?)?.toDouble() ?? 0)),
+          _summaryRow('Interest (3%)', CurrencyFormatter.format((quote['flatInterestAmount'] as num?)?.toDouble() ?? 0)),
           _summaryRow('Total repayable', CurrencyFormatter.format((quote['totalRepayable'] as num?)?.toDouble() ?? 0)),
           _summaryRow('Net disbursement', CurrencyFormatter.format((quote['netDisbursement'] as num?)?.toDouble() ?? 0)),
           const Divider(height: 20),

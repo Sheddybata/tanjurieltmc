@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useState, FormEvent } from 'react';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { Header } from '@/components/layout/header';
@@ -42,7 +43,6 @@ export default function SettingsPage() {
   const [backfillLoading, setBackfillLoading] = useState(false);
   const [backfillRunning, setBackfillRunning] = useState(false);
   const [backfillResult, setBackfillResult] = useState<BackfillResult | null>(null);
-
   useEffect(() => {
     loadAccounts();
     loadBackfillPreview();
@@ -209,6 +209,14 @@ export default function SettingsPage() {
           ) : (
             <p className="text-sm text-gray-400">Could not load member account status.</p>
           )}
+        </Card>
+        <Card title="Loan interest">
+          <p className="text-sm text-gray-500">
+            Set the default rate, update one loan by number, or bulk-recalculate existing loans.{' '}
+            <Link href="/admin/loan-pricing" className="font-medium text-brand-600 hover:underline">
+              Open loan interest admin →
+            </Link>
+          </p>
         </Card>
         <Card title="Manual operations mode">
           <p className="text-sm text-gray-500">

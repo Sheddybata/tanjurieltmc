@@ -293,7 +293,7 @@ class MockApiHandler {
   static Map<String, dynamic> _mockLoanQuote(Map<String, dynamic> body) {
     final principal = (body['principalAmount'] as num?)?.toDouble() ?? 0;
     final periods = (body['tenurePeriods'] as num?)?.toInt() ?? 1;
-    final interest = principal * 0.10;
+    final interest = principal * 0.03;
     final upfront = principal * 0.10;
     final total = principal + interest;
     return {

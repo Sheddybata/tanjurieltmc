@@ -494,7 +494,7 @@ function QuoteCard({ quote, repaymentPlan, periods }: { quote: LoanQuote; repaym
       <dl className="grid gap-1 sm:grid-cols-2">
         <div><dt className="text-gray-600">Opening fee</dt><dd>{formatCurrency(quote.openingFee)}</dd></div>
         <div><dt className="text-gray-600">Upfront fee (10%)</dt><dd>{formatCurrency(quote.upfrontFee)}</dd></div>
-        <div><dt className="text-gray-600">Interest (10%)</dt><dd>{formatCurrency(quote.flatInterestAmount)}</dd></div>
+        <div><dt className="text-gray-600">Interest (3%)</dt><dd>{formatCurrency(quote.flatInterestAmount)}</dd></div>
         <div><dt className="text-gray-600">Total repayable</dt><dd className="font-semibold">{formatCurrency(quote.totalRepayable)}</dd></div>
         <div><dt className="text-gray-600">Net disbursement</dt><dd>{formatCurrency(quote.netDisbursement)}</dd></div>
       </dl>

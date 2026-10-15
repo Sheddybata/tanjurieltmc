@@ -41,6 +41,15 @@ export interface CustomerProfileInput {
   monthlyIncome?: number;
 }
 
+export function customerProfileUpdateData(dto: CustomerProfileInput, photoUrl?: string) {
+  const data = customerProfileCreateData(dto, photoUrl);
+  if (photoUrl === undefined) {
+    const { photoUrl: _omit, ...rest } = data;
+    return rest;
+  }
+  return data;
+}
+
 export function customerProfileCreateData(dto: CustomerProfileInput, photoUrl?: string) {
   return {
     title: dto.title,

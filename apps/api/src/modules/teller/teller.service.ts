@@ -41,9 +41,11 @@ import {
 } from '../../common/utils/child-savings.util';
 import {
   customerProfileCreateData,
+  customerProfileUpdateData,
   normalizePhone,
   throwIfCustomerIdentityTaken,
 } from '../../common/utils/customer-profile.util';
+import { UpdateCustomerDto } from './dto/update-customer.dto';
 
 import * as bcrypt from 'bcryptjs';
 
@@ -137,7 +139,47 @@ export class TellerService {
     return customer;
   }
 
+  async updateCustomer(customerId: string, dto: UpdateCustomerDto, photoUrl?: string) {
+    const customer = await this.prisma.customer.findUnique({ where: { id: customerId } });
+    if (!customer) throw new NotFoundException('Customer not found');
 
+    const phone = normalizePhone(dto.phone);
+    const alternatePhone = dto.alternatePhone ? normalizePhone(dto.alternatePhone) : undefined;
+
+    const conflict = await this.prisma.customer.findFirst({
+      where: {
+        id: { not: customerId },
+        OR: [
+          { phone },
+          ...(dto.bvn ? [{ bvn: dto.bvn }] : []),
+          ...(dto.nin ? [{ nin: dto.nin }] : []),
+        ],
+      },
+      select: {
+        phone: true,
+        bvn: true,
+        nin: true,
+        firstName: true,
+        lastName: true,
+        customerNumber: true,
+      },
+    });
+    if (conflict) {
+      throwIfCustomerIdentityTaken(conflict, { phone, bvn: dto.bvn, nin: dto.nin });
+    }
+
+    const dob = new Date(dto.dateOfBirth);
+    if (Number.isNaN(dob.getTime()) || dob >= new Date()) {
+      throw new BadRequestException('Date of birth must be a valid date in the past');
+    }
+
+    await this.prisma.customer.update({
+      where: { id: customerId },
+      data: customerProfileUpdateData({ ...dto, phone, alternatePhone }, photoUrl),
+    });
+
+    return this.getCustomer(customerId);
+  }
 
   async searchCustomers(query: string, page = 1, limit = 20) {
 

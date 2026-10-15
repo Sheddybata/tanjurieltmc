@@ -16,6 +16,7 @@ import { contributionFrequencyLabel } from '@/lib/contribution-frequency';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { primaryMemberAccountNumber } from '@/lib/member-id';
 import { CustomerBioCard } from '@/components/customers/customer-bio-card';
+import { CustomerProfileEditForm } from '@/components/customers/customer-profile-edit-form';
 import { apiAssetUrl } from '@/lib/api-origin';
 import { useToast } from '@/components/ui/toast-provider';
 import { useAuth } from '@/lib/auth-context';
@@ -109,6 +110,7 @@ export default function CustomerDetailPage() {
   const [loading, setLoading] = useState(true);
   const [appPin, setAppPin] = useState('');
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
   const childSavingsAccounts = customer?.accounts?.filter((a) => a.type === 'MY_PIKIN') ?? [];
 
   useEffect(() => {
@@ -201,9 +203,26 @@ export default function CustomerDetailPage() {
         <div className="mb-4">
           <Link href="/teller/customers" className="text-sm text-brand-600 hover:underline">← Back to customers</Link>
         </div>
+        {editing ? (
+          <CustomerProfileEditForm
+            customer={customer}
+            onCancel={() => setEditing(false)}
+            onSaved={async () => {
+              showToast('Member profile updated', 'success');
+              setEditing(false);
+              await load();
+            }}
+          />
+        ) : (
+        <>
         <div className="grid gap-6 lg:grid-cols-2">
           <Card className="p-6">
-            <h2 className="mb-4 text-lg font-semibold">Member profile</h2>
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+              <h2 className="text-lg font-semibold">Member profile</h2>
+              <Button type="button" variant="secondary" onClick={() => setEditing(true)}>
+                Edit profile
+              </Button>
+            </div>
             <CustomerBioCard customer={customer} />
             <dl className="mt-6 space-y-3 border-t border-gray-100 pt-4 text-sm">
               <div>
@@ -444,6 +463,8 @@ export default function CustomerDetailPage() {
             </table>
           )}
         </Card>
+        </>
+        )}
       </PageShell>
     </DashboardLayout>
   );

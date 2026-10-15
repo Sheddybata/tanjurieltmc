@@ -6,6 +6,7 @@ import { LoanStatus } from '@tanjuriel/database';
 import { Permission, JwtPayload } from '@tanjuriel/shared';
 import { TellerService } from './teller.service';
 import { RegisterCustomerDto, OpenAccountDto, TransactionDto, EnableMobileAccessDto, LoanRepaymentDto, TellerTransferDto, TellerApplyLoanDto, TellerLoanQuoteDto } from './dto/teller.dto';
+import { UpdateCustomerDto } from './dto/update-customer.dto';
 import { JwtAuthGuard, PermissionsGuard } from '../../common/guards/auth.guards';
 import { Permissions, User } from '../../common/decorators/auth.decorators';
 import {
@@ -97,6 +98,27 @@ export class TellerController {
   @ApiOperation({ summary: 'Get customer details' })
   async getCustomer(@Param('id') id: string) {
     const customer = await this.tellerService.getCustomer(id);
+    return { success: true, data: customer };
+  }
+
+  @Patch('customers/:id')
+  @Permissions(Permission.REGISTER_CUSTOMER)
+  @ApiOperation({ summary: 'Update customer profile (correct registration mistakes)' })
+  @ApiConsumes('multipart/form-data', 'application/json')
+  @UseInterceptors(
+    FileInterceptor('customerPhoto', {
+      storage: customerPhotoStorage,
+      fileFilter: customerPhotoFilter,
+      limits: { fileSize: 5 * 1024 * 1024 },
+    }),
+  )
+  async updateCustomer(
+    @Param('id') id: string,
+    @Body() dto: UpdateCustomerDto,
+    @UploadedFile() customerPhoto?: Express.Multer.File,
+  ) {
+    const photoUrl = customerPhoto ? customerPhotoPublicPath(customerPhoto.filename) : undefined;
+    const customer = await this.tellerService.updateCustomer(id, dto, photoUrl);
     return { success: true, data: customer };
   }
 

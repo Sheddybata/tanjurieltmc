@@ -299,6 +299,12 @@ export async function mockRequest<T>(
     return { success: true, data: customer } as T;
   }
 
+  if (endpoint.match(/^\/teller\/customers\/[\w-]+$/) && method === 'PATCH') {
+    const id = endpoint.split('/')[3];
+    const customer = MOCK_CUSTOMERS.find((c) => c.id === id) || MOCK_CUSTOMERS[0];
+    return { success: true, data: { ...customer, ...(body as object) } } as T;
+  }
+
   if (endpoint.startsWith('/teller/customers') && method === 'GET') {
     const qs = endpoint.includes('?') ? new URLSearchParams(endpoint.split('?')[1]) : new URLSearchParams();
     const page = Math.max(1, Number(qs.get('page') || 1));

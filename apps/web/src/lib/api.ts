@@ -168,7 +168,7 @@ class ApiClient {
     this.clearGetCache();
     return this.request<T>(endpoint, {
       method: 'PATCH',
-      body: body ? JSON.stringify(body) : undefined,
+      body: body instanceof FormData ? body : body ? JSON.stringify(body) : undefined,
     });
   }
 

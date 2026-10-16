@@ -1,10 +1,22 @@
-import { BadRequestException, Controller, Get, Post, Param, Body, Query, UseGuards, UploadedFile, UseInterceptors } from '@nestjs/common';
+import {
+  BadRequestException,
+  Controller,
+  Get,
+  Post,
+  Delete,
+  Param,
+  Body,
+  Query,
+  UseGuards,
+  UploadedFile,
+  UseInterceptors,
+} from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiConsumes } from '@nestjs/swagger';
 import { LoanStatus } from '@tanjuriel/database';
 import { Permission, JwtPayload } from '@tanjuriel/shared';
 import { ManagerService } from './manager.service';
-import { LoanActionDto, ManagerApplyLoanDto, ManagerLoanQuoteDto } from './dto/manager.dto';
+import { DeleteLoanDto, LoanActionDto, ManagerApplyLoanDto, ManagerLoanQuoteDto } from './dto/manager.dto';
 import { JwtAuthGuard, PermissionsGuard } from '../../common/guards/auth.guards';
 import { Permissions, User } from '../../common/decorators/auth.decorators';
 import {
@@ -140,6 +152,14 @@ export class ManagerController {
   async disburseLoan(@Param('id') id: string, @User() user: JwtPayload, @Body() dto: LoanActionDto) {
     const loan = await this.managerService.disburseLoan(id, user, dto);
     return { success: true, data: loan };
+  }
+
+  @Delete('loans/:id')
+  @Permissions(Permission.DELETE_LOAN)
+  @ApiOperation({ summary: 'Permanently delete a loan (including disbursed duplicates with confirmation)' })
+  async deleteLoan(@Param('id') id: string, @User() user: JwtPayload, @Body() dto: DeleteLoanDto) {
+    const result = await this.managerService.deleteLoan(id, user, dto);
+    return { success: true, data: result };
   }
 
   @Get('portfolio')

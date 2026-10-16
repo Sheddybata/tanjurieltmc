@@ -1,10 +1,26 @@
-import { BadRequestException, Controller, Get, Post, Body, Param, Query, Patch, UseGuards, UploadedFile, UseInterceptors, Res } from '@nestjs/common';
+import {
+  BadRequestException,
+  Controller,
+  Get,
+  Post,
+  Delete,
+  Body,
+  Param,
+  Query,
+  Patch,
+  UseGuards,
+  UploadedFile,
+  UseInterceptors,
+  Res,
+} from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiConsumes } from '@nestjs/swagger';
 import { Response } from 'express';
 import { LoanStatus } from '@tanjuriel/database';
 import { Permission, JwtPayload } from '@tanjuriel/shared';
 import { TellerService } from './teller.service';
+import { ManagerService } from '../manager/manager.service';
+import { DeleteLoanDto } from '../manager/dto/manager.dto';
 import { RegisterCustomerDto, OpenAccountDto, TransactionDto, EnableMobileAccessDto, LoanRepaymentDto, TellerTransferDto, TellerApplyLoanDto, TellerLoanQuoteDto } from './dto/teller.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
 import { JwtAuthGuard, PermissionsGuard } from '../../common/guards/auth.guards';
@@ -33,6 +49,7 @@ import { ChildSavingsStatementService } from '../child-savings/child-savings-sta
 export class TellerController {
   constructor(
     private tellerService: TellerService,
+    private managerService: ManagerService,
     private childSavingsStatementService: ChildSavingsStatementService,
   ) {}
 
@@ -245,6 +262,14 @@ export class TellerController {
   async getLoan(@Param('id') id: string) {
     const loan = await this.tellerService.getLoan(id);
     return { success: true, data: loan };
+  }
+
+  @Delete('loans/:id')
+  @Permissions(Permission.DELETE_LOAN)
+  @ApiOperation({ summary: 'Delete a loan (duplicate entry cleanup)' })
+  async deleteLoan(@Param('id') id: string, @User() user: JwtPayload, @Body() dto: DeleteLoanDto) {
+    const result = await this.managerService.deleteLoan(id, user, dto);
+    return { success: true, data: result };
   }
 
   @Post('loans/repay')

@@ -33,6 +33,7 @@ export enum Permission {
   APPROVE_LOAN = 'approve:loan',
   DISBURSE_LOAN = 'disburse:loan',
   VIEW_LOANS = 'view:loans',
+  DELETE_LOAN = 'delete:loan',
   VIEW_PORTFOLIO = 'view:portfolio',
 
   // Reporting
@@ -67,6 +68,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.APPROVE_LOAN,
     Permission.DISBURSE_LOAN,
     Permission.VIEW_LOANS,
+    Permission.DELETE_LOAN,
     Permission.VIEW_PORTFOLIO,
     Permission.VIEW_REPORTS,
     Permission.EXPORT_REPORTS,
@@ -85,6 +87,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.VIEW_DASHBOARD,
     Permission.CREATE_LOAN,
     Permission.VIEW_LOANS,
+    Permission.DELETE_LOAN,
   ],
 };
 

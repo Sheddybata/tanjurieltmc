@@ -1,5 +1,5 @@
-import { IsOptional, IsString, IsEnum } from 'class-validator';
-import { ApiPropertyOptional, OmitType } from '@nestjs/swagger';
+import { IsBoolean, IsOptional, IsString, IsEnum, MinLength } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional, OmitType } from '@nestjs/swagger';
 import { LoanStatus } from '@tanjuriel/database';
 import { IsEntityId } from '../../../common/validators/entity-id.decorator';
 import { CustomerApplyLoanDto } from '../../customer/dto/customer-loan.dto';
@@ -19,6 +19,20 @@ export class LoanActionDto {
   @IsOptional()
   @IsString()
   comment?: string;
+}
+
+export class DeleteLoanDto {
+  @ApiProperty({ description: 'Reason for deletion (stored in audit log)' })
+  @IsString()
+  @MinLength(3)
+  reason: string;
+
+  @ApiPropertyOptional({
+    description: 'Must be true to delete a loan that was already disbursed (reverses savings credit)',
+  })
+  @IsOptional()
+  @IsBoolean()
+  confirmDisbursed?: boolean;
 }
 
 export class LoanFilterDto {

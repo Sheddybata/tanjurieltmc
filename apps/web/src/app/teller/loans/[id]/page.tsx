@@ -21,6 +21,7 @@ import {
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { primaryMemberAccountNumber } from '@/lib/member-id';
 import { useToast } from '@/components/ui/toast-provider';
+import { LoanDeletePanel } from '@/components/loans/loan-delete-panel';
 
 interface LoanDetail {
   id: string;
@@ -223,6 +224,13 @@ export default function TellerLoanDetailPage() {
             </div>
           </Card>
         )}
+
+        <LoanDeletePanel
+          loanNumber={loan.loanNumber}
+          status={loan.status}
+          deleteEndpoint={`/teller/loans/${id}`}
+          redirectAfterDelete="/teller/loans"
+        />
       </PageShell>
     </DashboardLayout>
   );

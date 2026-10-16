@@ -172,6 +172,14 @@ class ApiClient {
     });
   }
 
+  delete<T>(endpoint: string, body?: unknown) {
+    this.clearGetCache();
+    return this.request<T>(endpoint, {
+      method: 'DELETE',
+      body: body ? JSON.stringify(body) : undefined,
+    });
+  }
+
   put<T>(endpoint: string, body?: unknown) {
     this.clearGetCache();
     return this.request<T>(endpoint, {

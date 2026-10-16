@@ -3,7 +3,15 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
-import { ApprovalAction, LoanStatus, TransactionStatus, TransactionType, AccountStatus } from '@tanjuriel/database';
+import {
+  ApprovalAction,
+  LoanStatus,
+  PaymentRequestStatus,
+  PaymentRequestType,
+  TransactionStatus,
+  TransactionType,
+  AccountStatus,
+} from '@tanjuriel/database';
 import { JwtPayload, PortfolioSummary } from '@tanjuriel/shared';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import {
@@ -20,7 +28,14 @@ import {
   parseMoneyToKobo,
 } from '../../common/utils/money.util';
 import { LoanApplicationService } from '../loans/loan-application.service';
-import { LoanActionDto, ManagerApplyLoanDto, ManagerLoanQuoteDto } from './dto/manager.dto';
+import { DeleteLoanDto, LoanActionDto, ManagerApplyLoanDto, ManagerLoanQuoteDto } from './dto/manager.dto';
+
+const DISBURSED_LIKE_STATUSES: LoanStatus[] = [
+  LoanStatus.DISBURSED,
+  LoanStatus.ACTIVE,
+  LoanStatus.OVERDUE,
+  LoanStatus.CLOSED,
+];
 
 @Injectable()
 export class ManagerService {
@@ -302,6 +317,125 @@ export class ManagerService {
     });
 
     return this.getLoan(id);
+  }
+
+  async deleteLoan(id: string, user: JwtPayload, dto: DeleteLoanDto) {
+    const loan = await this.getLoan(id);
+
+    const paidInstallments = loan.schedules.filter((s) => s.isPaid).length;
+    if (paidInstallments > 0) {
+      throw new BadRequestException(
+        'This loan has recorded repayments on its schedule. Reverse or reallocate repayments before deleting.',
+      );
+    }
+
+    const approvedRepayments = await this.prisma.paymentRequest.count({
+      where: {
+        loanId: id,
+        type: PaymentRequestType.LOAN_REPAYMENT,
+        status: PaymentRequestStatus.APPROVED,
+      },
+    });
+    if (approvedRepayments > 0) {
+      throw new BadRequestException(
+        'This loan has approved repayment transactions. Cannot delete until those are handled manually.',
+      );
+    }
+
+    const needsDisbursedConfirm = DISBURSED_LIKE_STATUSES.includes(loan.status);
+    if (needsDisbursedConfirm && !dto.confirmDisbursed) {
+      throw new BadRequestException(
+        'This loan was disbursed or is active on the portfolio. Set confirmDisbursed to true to delete and reverse the disbursement credit on savings.',
+      );
+    }
+
+    if (loan.status === LoanStatus.WRITTEN_OFF) {
+      throw new BadRequestException('Written-off loans cannot be deleted from the portal.');
+    }
+
+    const snapshot = {
+      id: loan.id,
+      loanNumber: loan.loanNumber,
+      status: loan.status,
+      principalAmount: loan.principalAmount,
+      customerId: loan.customerId,
+      reason: dto.reason,
+    };
+
+    await this.prisma.$transaction(async (tx) => {
+      const linkedRequests = await tx.paymentRequest.findMany({
+        where: { loanId: id },
+        select: { id: true, status: true },
+      });
+      for (const req of linkedRequests) {
+        if (req.status === PaymentRequestStatus.PENDING) {
+          await tx.paymentRequestApproval.deleteMany({ where: { paymentRequestId: req.id } });
+          await tx.paymentRequest.delete({ where: { id: req.id } });
+        } else {
+          await tx.paymentRequest.update({
+            where: { id: req.id },
+            data: { loanId: null },
+          });
+        }
+      }
+
+      if (needsDisbursedConfirm && loan.accountId && Number(loan.disbursedAmount) > 0) {
+        const account = await tx.account.findUnique({ where: { id: loan.accountId } });
+        if (account) {
+          const amountKobo = parseMoneyToKobo(loan.disbursedAmount);
+          const { balanceKobo, heldKobo } = readAccountKobo(account);
+          const ledger = applyBalanceDelta(balanceKobo, heldKobo, -amountKobo);
+
+          await tx.account.update({
+            where: { id: account.id },
+            data: {
+              balance: ledger.balance,
+              availableBalance: ledger.availableBalance,
+            },
+          });
+
+          const disburseTx = await tx.transaction.findFirst({
+            where: {
+              accountId: account.id,
+              type: TransactionType.LOAN_DISBURSEMENT,
+              status: TransactionStatus.COMPLETED,
+              narration: { contains: loan.loanNumber },
+              reversedAt: null,
+            },
+          });
+
+          if (disburseTx) {
+            await tx.transaction.update({
+              where: { id: disburseTx.id },
+              data: {
+                status: TransactionStatus.REVERSED,
+                reversedAt: new Date(),
+                reversalRef: generateTransactionRef(),
+              },
+            });
+          }
+
+          await tx.transaction.create({
+            data: {
+              reference: generateTransactionRef(),
+              type: TransactionType.REVERSAL,
+              status: TransactionStatus.COMPLETED,
+              amount: formatKoboAsDecimal(amountKobo),
+              balanceBefore: ledger.balanceBefore,
+              balanceAfter: ledger.balanceAfter,
+              narration: `Loan deleted — reverse disbursement ${loan.loanNumber}: ${dto.reason}`,
+              accountId: account.id,
+              processedById: user.sub,
+              metadata: { loanId: loan.id, loanNumber: loan.loanNumber, deleteReason: dto.reason },
+            },
+          });
+        }
+      }
+
+      await tx.loan.delete({ where: { id } });
+    });
+
+    return { deleted: true, ...snapshot };
   }
 
   async getPortfolioSummary(): Promise<PortfolioSummary> {

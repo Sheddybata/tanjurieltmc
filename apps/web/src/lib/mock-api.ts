@@ -299,6 +299,15 @@ export async function mockRequest<T>(
     return { success: true, data: customer } as T;
   }
 
+  if (
+    (endpoint.match(/^\/teller\/loans\/[\w-]+$/) || endpoint.match(/^\/manager\/loans\/[\w-]+$/)) &&
+    method === 'DELETE'
+  ) {
+    const parts = endpoint.split('/');
+    const loanNumber = parts[3];
+    return { success: true, data: { deleted: true, id: loanNumber, loanNumber: `LN-MOCK-${loanNumber}` } } as T;
+  }
+
   if (endpoint.match(/^\/teller\/customers\/[\w-]+$/) && method === 'PATCH') {
     const id = endpoint.split('/')[3];
     const customer = MOCK_CUSTOMERS.find((c) => c.id === id) || MOCK_CUSTOMERS[0];

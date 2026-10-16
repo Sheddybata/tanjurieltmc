@@ -49,14 +49,17 @@ export class ManagerService {
   }
 
   async listCustomers(query?: string, page = 1, limit = 100) {
-    const { skip, take, page: p, limit: l } = paginate(page, limit);
-    const where = query?.trim()
+    const { skip, take, page: p, limit: l } = paginate(page, limit, 500);
+    const q = query?.trim();
+    const where = q
       ? {
           OR: [
-            { firstName: { contains: query.trim(), mode: 'insensitive' as const } },
-            { lastName: { contains: query.trim(), mode: 'insensitive' as const } },
-            { phone: { contains: query.trim() } },
-            { customerNumber: { contains: query.trim(), mode: 'insensitive' as const } },
+            { firstName: { contains: q, mode: 'insensitive' as const } },
+            { lastName: { contains: q, mode: 'insensitive' as const } },
+            { phone: { contains: q } },
+            { customerNumber: { contains: q, mode: 'insensitive' as const } },
+            { bvn: { contains: q } },
+            { accounts: { some: { accountNumber: { contains: q, mode: 'insensitive' as const } } } },
           ],
         }
       : {};

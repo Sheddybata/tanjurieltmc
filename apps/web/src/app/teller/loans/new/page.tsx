@@ -15,7 +15,7 @@ function NewLoanForm() {
   return (
     <LoanApplicationWizard
       initialCustomerId={customerId}
-      customersPath="/teller/customers?limit=200"
+      customersSearchPath="/teller/customers"
       customerPath={tellerCustomerDetailPath}
       quotePath="/teller/loans/quote"
       submitPath="/teller/loans"

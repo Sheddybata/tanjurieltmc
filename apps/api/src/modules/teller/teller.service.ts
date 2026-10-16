@@ -183,7 +183,7 @@ export class TellerService {
 
   async searchCustomers(query: string, page = 1, limit = 20) {
 
-    const { skip, take, page: p, limit: l } = paginate(page, limit);
+    const { skip, take, page: p, limit: l } = paginate(page, limit, 500);
 
 
 

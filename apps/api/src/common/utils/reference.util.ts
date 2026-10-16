@@ -81,9 +81,9 @@ export function calculateLoanSchedule(
   };
 }
 
-export function paginate(page = 1, limit = 20) {
+export function paginate(page = 1, limit = 20, maxLimit = 100) {
   const safePage = Math.max(1, page);
-  const safeLimit = Math.min(100, Math.max(1, limit));
+  const safeLimit = Math.min(maxLimit, Math.max(1, limit));
   return {
     skip: (safePage - 1) * safeLimit,
     take: safeLimit,

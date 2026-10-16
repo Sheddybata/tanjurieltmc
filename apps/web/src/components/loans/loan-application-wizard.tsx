@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { api } from '@/lib/api';
 import { formatCurrency, formatMoneyForApi } from '@/lib/utils';
 import { formatCustomerOptionLabel } from '@/lib/member-id';
+import { CustomerSearchSelect } from '@/components/customers/customer-search-select';
 import { buildLoanContractText } from '@/lib/loan-contract-text';
 import {
   COLLATERAL_TYPES,
@@ -37,7 +38,8 @@ const defaultManagerCustomerPath = (id: string) => `/manager/customers/${id}`;
 
 interface Props {
   initialCustomerId?: string;
-  customersPath?: string;
+  /** API base for member search, e.g. `/teller/customers` */
+  customersSearchPath?: string;
   customerPath?: (id: string) => string;
   quotePath?: string;
   submitPath?: string;
@@ -47,7 +49,7 @@ interface Props {
 
 export function LoanApplicationWizard({
   initialCustomerId = '',
-  customersPath = '/manager/customers?limit=200',
+  customersSearchPath = '/manager/customers',
   customerPath = defaultManagerCustomerPath,
   quotePath = '/manager/loans/quote',
   submitPath = '/manager/loans',
@@ -58,10 +60,10 @@ export function LoanApplicationWizard({
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [customers, setCustomers] = useState<CustomerPrefill[]>([]);
   const [quote, setQuote] = useState<LoanQuote | null>(null);
 
   const [customerId, setCustomerId] = useState(initialCustomerId);
+  const [customerPickSummary, setCustomerPickSummary] = useState('');
   const [fullName, setFullName] = useState('');
   const [locationType, setLocationType] = useState('URBAN');
   const [address, setAddress] = useState('');
@@ -99,12 +101,6 @@ export function LoanApplicationWizard({
     return collateralPhotoRef.current ?? collateralPhoto;
   }
 
-  useEffect(() => {
-    api.get<{ success: boolean; data: CustomerPrefill[] }>(customersPath)
-      .then((res) => setCustomers(res.data))
-      .catch(() => setCustomers([]));
-  }, [customersPath]);
-
   const customerPathRef = useRef(customerPath);
   customerPathRef.current = customerPath;
 
@@ -114,6 +110,7 @@ export function LoanApplicationWizard({
       const res = await api.get<{ success: boolean; data: CustomerPrefill }>(customerPathRef.current(id));
       const c = res.data;
       setFullName(`${c.firstName} ${c.lastName}`.trim());
+      setCustomerPickSummary(formatCustomerOptionLabel(c.firstName, c.lastName, c.accounts, c.phone));
       if (c.gender) setGender(c.gender);
       if (c.dateOfBirth) setDob(c.dateOfBirth.slice(0, 10));
       if (c.address) {
@@ -302,21 +299,16 @@ export function LoanApplicationWizard({
 
       {step === 0 && (
         <div className="space-y-4">
-          <Select
+          <CustomerSearchSelect
             label="Customer"
             required
             value={customerId}
-            onChange={(e) => setCustomerId(e.target.value)}
-            options={[
-              { value: '', label: customers.length ? 'Select customer…' : 'Loading customers…' },
-              ...(customerId && !customers.some((c) => c.id === customerId)
-                ? [{ value: customerId, label: fullName.trim() || 'Selected customer' }]
-                : []),
-              ...customers.map((c) => ({
-                value: c.id,
-                label: formatCustomerOptionLabel(c.firstName, c.lastName, c.accounts, c.phone),
-              })),
-            ]}
+            onChange={(id) => {
+              setCustomerId(id);
+              if (!id) setCustomerPickSummary('');
+            }}
+            searchPath={customersSearchPath}
+            selectedSummary={customerPickSummary}
           />
           <Input label="Full name" required value={fullName} onChange={(e) => setFullName(e.target.value)} />
           <Select

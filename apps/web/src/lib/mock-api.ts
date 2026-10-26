@@ -440,8 +440,8 @@ export async function mockRequest<T>(
     return {
       success: true,
       data: [
-        { id: 'p1', code: 'SME-001', name: 'SME Working Capital', minAmount: 50000, maxAmount: 5000000, interestRate: 0.025, isActive: true },
-        { id: 'p2', code: 'PERS-001', name: 'Personal Micro Loan', minAmount: 10000, maxAmount: 2000000, interestRate: 0.03, isActive: true },
+        { id: 'p1', code: 'SME-001', name: 'SME Working Capital', minAmount: 50000, maxAmount: 30000000, interestRate: 0.025, isActive: true },
+        { id: 'p2', code: 'PERS-001', name: 'Personal Micro Loan', minAmount: 10000, maxAmount: 30000000, interestRate: 0.03, isActive: true },
       ],
     } as T;
   }

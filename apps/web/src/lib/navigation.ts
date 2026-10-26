@@ -127,6 +127,8 @@ export const NAV_ITEMS: NavItem[] = [
 
   { label: 'Portfolio', href: '/manager/portfolio', icon: BarChart3, roles: [UserRole.MANAGER, UserRole.ADMIN], group: 'credit' },
 
+  { label: 'Account officers', href: '/manager/account-officers', icon: Users, roles: [UserRole.MANAGER, UserRole.ADMIN], group: 'operations' },
+
   { label: 'Reports', href: '/reports', icon: BarChart3, roles: [UserRole.ADMIN, UserRole.MANAGER], group: 'operations' },
 
   { label: 'User Management', href: '/admin/users', icon: Users, roles: [UserRole.ADMIN], group: 'administration' },

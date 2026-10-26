@@ -28,7 +28,14 @@ import {
   parseMoneyToKobo,
 } from '../../common/utils/money.util';
 import { LoanApplicationService } from '../loans/loan-application.service';
-import { DeleteLoanDto, LoanActionDto, ManagerApplyLoanDto, ManagerLoanQuoteDto } from './dto/manager.dto';
+import {
+  AssignAccountOfficerDto,
+  DeleteLoanDto,
+  LoanActionDto,
+  ManagerApplyLoanDto,
+  ManagerLoanQuoteDto,
+} from './dto/manager.dto';
+import { ACCOUNT_OFFICER_OPTIONS } from '../../common/constants/account-officers.constant';
 
 const DISBURSED_LIKE_STATUSES: LoanStatus[] = [
   LoanStatus.DISBURSED,
@@ -92,6 +99,91 @@ export class ManagerService {
     ]);
 
     return { data: customers, meta: paginationMeta(total, p, l) };
+  }
+
+  getAccountOfficerOptions() {
+    return ACCOUNT_OFFICER_OPTIONS;
+  }
+
+  async listMembersWithAccounts(
+    query?: string,
+    page = 1,
+    limit = 50,
+    assignmentFilter: 'all' | 'assigned' | 'unassigned' = 'all',
+  ) {
+    const { skip, take, page: p, limit: l } = paginate(page, limit, 500);
+    const q = query?.trim();
+    const where = {
+      accounts: { some: {} },
+      ...(assignmentFilter === 'unassigned' ? { accountOfficer: null } : {}),
+      ...(assignmentFilter === 'assigned' ? { accountOfficer: { not: null } } : {}),
+      ...(q
+        ? {
+            OR: [
+              { firstName: { contains: q, mode: 'insensitive' as const } },
+              { lastName: { contains: q, mode: 'insensitive' as const } },
+              { phone: { contains: q } },
+              { customerNumber: { contains: q, mode: 'insensitive' as const } },
+              { bvn: { contains: q } },
+              { accounts: { some: { accountNumber: { contains: q, mode: 'insensitive' as const } } } },
+            ],
+          }
+        : {}),
+    };
+
+    const [data, total] = await Promise.all([
+      this.prisma.customer.findMany({
+        where,
+        skip,
+        take,
+        orderBy: [{ accountOfficer: 'asc' }, { lastName: 'asc' }, { firstName: 'asc' }],
+        select: {
+          id: true,
+          customerNumber: true,
+          firstName: true,
+          lastName: true,
+          phone: true,
+          accountOfficer: true,
+          accountOfficerAssignedAt: true,
+          accounts: {
+            select: { accountNumber: true, type: true, status: true, label: true },
+            orderBy: { createdAt: 'asc' },
+          },
+          accountOfficerAssignedBy: { select: { firstName: true, lastName: true } },
+        },
+      }),
+      this.prisma.customer.count({ where }),
+    ]);
+
+    return { data, meta: paginationMeta(total, p, l) };
+  }
+
+  async assignAccountOfficer(customerId: string, user: JwtPayload, dto: AssignAccountOfficerDto) {
+    const customer = await this.prisma.customer.findUnique({
+      where: { id: customerId },
+      include: { accounts: { take: 1 } },
+    });
+    if (!customer) throw new NotFoundException('Customer not found');
+    if (customer.accounts.length === 0) {
+      throw new BadRequestException('This member has no accounts yet');
+    }
+
+    return this.prisma.customer.update({
+      where: { id: customerId },
+      data: {
+        accountOfficer: dto.accountOfficer,
+        accountOfficerAssignedAt: new Date(),
+        accountOfficerAssignedById: user.sub,
+      },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        accountOfficer: true,
+        accountOfficerAssignedAt: true,
+        accountOfficerAssignedBy: { select: { firstName: true, lastName: true } },
+      },
+    });
   }
 
   async getCustomerForLoan(id: string) {

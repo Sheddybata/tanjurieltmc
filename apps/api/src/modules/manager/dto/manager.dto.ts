@@ -1,3 +1,4 @@
+import { AccountOfficer } from '@tanjuriel/database';
 import { IsBoolean, IsOptional, IsString, IsEnum, MinLength } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional, OmitType } from '@nestjs/swagger';
 import { LoanStatus } from '@tanjuriel/database';
@@ -19,6 +20,12 @@ export class LoanActionDto {
   @IsOptional()
   @IsString()
   comment?: string;
+}
+
+export class AssignAccountOfficerDto {
+  @ApiProperty({ enum: AccountOfficer })
+  @IsEnum(AccountOfficer)
+  accountOfficer: AccountOfficer;
 }
 
 export class DeleteLoanDto {

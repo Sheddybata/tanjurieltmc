@@ -119,6 +119,15 @@ enum LoanRepaymentPlan {
   MONTHLY
 }
 
+enum AccountOfficer {
+  FANNA_P_HELLEN_TANCIT
+  YASON_BARBARA
+  DANLADI_DABANG_MERCY
+  DAVID_VICTORIA
+  BALA_DANJUMA_LUSA
+  DAVID_ADENOYI_PHILIP
+}
+
 enum RegistrationSource {
   BRANCH
   MOBILE
@@ -278,6 +287,7 @@ model User {
   transactions        Transaction[]        @relation("ProcessedBy")
   loanApprovals       LoanApproval[]
   registeredCustomers Customer[]           @relation("RegisteredBy")
+  accountOfficerAssignments Customer[]     @relation("AccountOfficerAssignedBy")
   openedAccounts      Account[]            @relation("OpenedBy")
   initiatedRequests   PaymentRequest[]     @relation("InitiatedRequests")
   requestApprovals    PaymentRequestApproval[]
@@ -346,11 +356,15 @@ model Customer {
   branchId        String
   registeredById  String
   registrationSource RegistrationSource @default(BRANCH)
+  accountOfficer  AccountOfficer?
+  accountOfficerAssignedAt DateTime?
+  accountOfficerAssignedById String?
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
 
   branch              Branch                 @relation(fields: [branchId], references: [id])
   registeredBy        User                   @relation("RegisteredBy", fields: [registeredById], references: [id])
+  accountOfficerAssignedBy User?             @relation("AccountOfficerAssignedBy", fields: [accountOfficerAssignedById], references: [id])
   accounts            Account[]
   loans               Loan[]
   paymentRequests     PaymentRequest[]

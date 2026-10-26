@@ -205,13 +205,13 @@ async function main() {
 
   await prisma.loanProduct.upsert({
     where: { code: 'SME-001' },
-    update: {},
+    update: { maxAmount: 30000000 },
       create: {
         code: 'SME-001',
         name: 'SME Working Capital',
         description: 'Short-term working capital for small businesses',
         minAmount: 50000,
-        maxAmount: 5000000,
+        maxAmount: 30000000,
         minTenureMonths: 3,
         maxTenureMonths: 24,
         interestRate: 0.025,
@@ -222,13 +222,13 @@ async function main() {
 
   await prisma.loanProduct.upsert({
     where: { code: 'PERS-001' },
-    update: { maxAmount: 2000000 },
+    update: { maxAmount: 30000000 },
       create: {
         code: 'PERS-001',
         name: 'Personal Micro Loan',
         description: 'Personal loans for salaried and self-employed clients',
         minAmount: 10000,
-        maxAmount: 2000000,
+        maxAmount: 30000000,
         minTenureMonths: 1,
         maxTenureMonths: 12,
         interestRate: 0.03,
@@ -239,13 +239,13 @@ async function main() {
 
   await prisma.loanProduct.upsert({
     where: { code: 'ASSET-001' },
-    update: {},
+    update: { maxAmount: 30000000 },
     create: {
       code: 'ASSET-001',
       name: 'Asset Financing',
       description: 'Finance equipment, vehicles, and other income-generating assets',
       minAmount: 100000,
-      maxAmount: 10000000,
+      maxAmount: 30000000,
       minTenureMonths: 3,
       maxTenureMonths: 36,
       interestRate: 0.025,

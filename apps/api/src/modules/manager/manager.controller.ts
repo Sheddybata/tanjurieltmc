@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
   Delete,
   Param,
   Body,
@@ -16,7 +17,13 @@ import { ApiTags, ApiBearerAuth, ApiOperation, ApiConsumes } from '@nestjs/swagg
 import { LoanStatus } from '@tanjuriel/database';
 import { Permission, JwtPayload } from '@tanjuriel/shared';
 import { ManagerService } from './manager.service';
-import { DeleteLoanDto, LoanActionDto, ManagerApplyLoanDto, ManagerLoanQuoteDto } from './dto/manager.dto';
+import {
+  AssignAccountOfficerDto,
+  DeleteLoanDto,
+  LoanActionDto,
+  ManagerApplyLoanDto,
+  ManagerLoanQuoteDto,
+} from './dto/manager.dto';
 import { JwtAuthGuard, PermissionsGuard } from '../../common/guards/auth.guards';
 import { Permissions, User } from '../../common/decorators/auth.decorators';
 import {
@@ -38,6 +45,44 @@ export class ManagerController {
   async getProducts() {
     const products = await this.managerService.getLoanProducts();
     return { success: true, data: products };
+  }
+
+  @Get('account-officers/options')
+  @Permissions(Permission.VIEW_CUSTOMERS)
+  @ApiOperation({ summary: 'List account officer names for assignment' })
+  async accountOfficerOptions() {
+    return { success: true, data: this.managerService.getAccountOfficerOptions() };
+  }
+
+  @Get('members/with-accounts')
+  @Permissions(Permission.VIEW_CUSTOMERS)
+  @ApiOperation({ summary: 'List members who have at least one account (for account officer assignment)' })
+  async listMembersWithAccounts(
+    @Query('query') query?: string,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+    @Query('assignment') assignment?: 'all' | 'assigned' | 'unassigned',
+  ) {
+    const filter = assignment === 'assigned' || assignment === 'unassigned' ? assignment : 'all';
+    const result = await this.managerService.listMembersWithAccounts(
+      query,
+      Number(page) || 1,
+      Number(limit) || 50,
+      filter,
+    );
+    return { success: true, ...result };
+  }
+
+  @Patch('customers/:id/account-officer')
+  @Permissions(Permission.VIEW_CUSTOMERS)
+  @ApiOperation({ summary: 'Assign account officer to a member (applies to all their products)' })
+  async assignAccountOfficer(
+    @Param('id') id: string,
+    @User() user: JwtPayload,
+    @Body() dto: AssignAccountOfficerDto,
+  ) {
+    const data = await this.managerService.assignAccountOfficer(id, user, dto);
+    return { success: true, data };
   }
 
   @Get('customers')

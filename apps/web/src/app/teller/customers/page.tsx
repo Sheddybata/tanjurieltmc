@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { api } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
 import { primaryMemberAccountNumber } from '@/lib/member-id';
+import { accountOfficerLabel } from '@/lib/account-officers';
 
 /** API allows up to 100 rows per request (`paginate` in the backend). */
 const PAGE_SIZE_OPTIONS = [25, 50, 100] as const;
@@ -25,6 +26,7 @@ interface Customer {
   kycStatus: string;
   createdAt: string;
   accounts: { accountNumber: string; type: string; balance: number }[];
+  accountOfficer?: string | null;
 }
 
 interface PaginationMeta {
@@ -144,14 +146,15 @@ function CustomersPageContent() {
                   <th className="pb-3 pr-4">Phone</th>
                   <th className="pb-3 pr-4">KYC</th>
                   <th className="pb-3 pr-4">Accounts</th>
+                  <th className="pb-3 pr-4">Account officer</th>
                   <th className="pb-3">Registered</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={6} className="py-8 text-center text-gray-400">Loading...</td></tr>
+                  <tr><td colSpan={7} className="py-8 text-center text-gray-400">Loading...</td></tr>
                 ) : customers.length === 0 ? (
-                  <tr><td colSpan={6} className="py-8 text-center text-gray-400">No customers found</td></tr>
+                  <tr><td colSpan={7} className="py-8 text-center text-gray-400">No customers found</td></tr>
                 ) : (
                   customers.map((c) => (
                     <tr key={c.id} className="border-b border-gray-50 hover:bg-gray-50/50">
@@ -166,6 +169,9 @@ function CustomersPageContent() {
                       <td className="py-3 pr-4 text-gray-600">{c.phone}</td>
                       <td className="py-3 pr-4"><span className={statusBadge(c.kycStatus)}>{c.kycStatus}</span></td>
                       <td className="py-3 pr-4 text-gray-600">{c.accounts?.length || 0}</td>
+                      <td className="py-3 pr-4 text-gray-600">
+                        {c.accountOfficer ? accountOfficerLabel(c.accountOfficer) : '—'}
+                      </td>
                       <td className="py-3 text-gray-500">{formatDate(c.createdAt)}</td>
                     </tr>
                   ))

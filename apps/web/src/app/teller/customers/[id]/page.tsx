@@ -21,6 +21,7 @@ import { apiAssetUrl } from '@/lib/api-origin';
 import { useToast } from '@/components/ui/toast-provider';
 import { useAuth } from '@/lib/auth-context';
 import { staffLoanBasePath } from '@/lib/role-access';
+import { accountOfficerLabel } from '@/lib/account-officers';
 
 interface CustomerDetail {
   id: string;
@@ -59,6 +60,8 @@ interface CustomerDetail {
   kycStatus: string;
   appEnabled?: boolean;
   registrationSource?: string;
+  accountOfficer?: string | null;
+  accountOfficerAssignedAt?: string;
   createdAt: string;
   branch?: { name: string };
   accounts: {
@@ -234,6 +237,23 @@ export default function CustomerDetailPage() {
               <div><dt className="text-gray-500">Registration</dt><dd>{customer.registrationSource || 'BRANCH'}</dd></div>
               <div><dt className="text-gray-500">Branch</dt><dd>{customer.branch?.name || 'Head Office – Jos'}</dd></div>
               <div><dt className="text-gray-500">Joined</dt><dd>{formatDate(customer.createdAt)}</dd></div>
+              <div>
+                <dt className="text-gray-500">Account officer</dt>
+                <dd>
+                  {customer.accountOfficer ? (
+                    <>
+                      {accountOfficerLabel(customer.accountOfficer)}
+                      {customer.accountOfficerAssignedAt && (
+                        <span className="block text-xs text-gray-500">
+                          Assigned {formatDate(customer.accountOfficerAssignedAt)}
+                        </span>
+                      )}
+                    </>
+                  ) : (
+                    <span className="text-amber-700">Not assigned</span>
+                  )}
+                </dd>
+              </div>
             </dl>
             {customer.kycStatus === 'PENDING' && (
               <Button className="mt-4" loading={actionLoading === 'kyc'} onClick={verifyKyc}>

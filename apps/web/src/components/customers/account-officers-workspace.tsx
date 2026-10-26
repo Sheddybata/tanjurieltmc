@@ -43,7 +43,8 @@ export function AccountOfficersWorkspace() {
   const { showToast } = useToast();
   const [members, setMembers] = useState<MemberRow[]>([]);
   const [query, setQuery] = useState('');
-  const [assignment, setAssignment] = useState<'all' | 'assigned' | 'unassigned'>('unassigned');
+  const [assignment, setAssignment] = useState<'all' | 'assigned' | 'unassigned'>('all');
+  const [loadError, setLoadError] = useState('');
   const [page, setPage] = useState(1);
   const [meta, setMeta] = useState<PaginationMeta | null>(null);
   const [loading, setLoading] = useState(true);
@@ -58,6 +59,7 @@ export function AccountOfficersWorkspace() {
 
   async function load(searchQuery = query) {
     setLoading(true);
+    setLoadError('');
     try {
       const params = new URLSearchParams({
         page: String(page),
@@ -70,9 +72,12 @@ export function AccountOfficersWorkspace() {
       );
       setMembers(res.data ?? []);
       setMeta(res.meta ?? null);
-    } catch {
+    } catch (err: unknown) {
       setMembers([]);
       setMeta(null);
+      const msg = (err as { message?: string })?.message || 'Could not load members';
+      setLoadError(msg);
+      showToast(msg, 'error');
     } finally {
       setLoading(false);
     }
@@ -117,6 +122,12 @@ export function AccountOfficersWorkspace() {
           to view a profile after assigning.
         </p>
       </Card>
+
+      {loadError && (
+        <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-800">
+          {loadError}. If this mentions database columns, run the latest API migration on Railway, then redeploy.
+        </div>
+      )}
 
       <FilterTabs
         tabs={ASSIGNMENT_TABS.map((t) => ({ id: t.id, label: t.label }))}

@@ -127,6 +127,8 @@ export const NAV_ITEMS: NavItem[] = [
 
   { label: 'Portfolio', href: '/manager/portfolio', icon: BarChart3, roles: [UserRole.MANAGER, UserRole.ADMIN], group: 'credit' },
 
+  { label: 'Customers', href: '/teller/customers', icon: Users, roles: [UserRole.MANAGER], group: 'operations' },
+
   { label: 'Account officers', href: '/manager/account-officers', icon: Users, roles: [UserRole.MANAGER, UserRole.ADMIN], group: 'operations' },
 
   { label: 'Reports', href: '/reports', icon: BarChart3, roles: [UserRole.ADMIN, UserRole.MANAGER], group: 'operations' },
@@ -140,6 +142,8 @@ export const NAV_ITEMS: NavItem[] = [
   { label: 'Loan Products', href: '/admin/products', icon: CreditCard, roles: [UserRole.ADMIN], group: 'administration' },
 
   { label: 'Loan interest', href: '/admin/loan-pricing', icon: Banknote, roles: [UserRole.ADMIN], group: 'administration' },
+
+  { label: 'Customers', href: '/teller/customers', icon: Users, roles: [UserRole.ADMIN], group: 'administration' },
 
   { label: 'Account officers', href: '/admin/account-officers', icon: Users, roles: [UserRole.ADMIN], group: 'administration' },
 

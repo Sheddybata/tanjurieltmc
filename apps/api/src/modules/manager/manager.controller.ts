@@ -48,14 +48,14 @@ export class ManagerController {
   }
 
   @Get('account-officers/options')
-  @Permissions(Permission.ASSIGN_ACCOUNT_OFFICER)
+  @Permissions(Permission.VIEW_CUSTOMERS)
   @ApiOperation({ summary: 'List account officer names for assignment' })
   async accountOfficerOptions() {
     return { success: true, data: this.managerService.getAccountOfficerOptions() };
   }
 
   @Get('members/with-accounts')
-  @Permissions(Permission.ASSIGN_ACCOUNT_OFFICER)
+  @Permissions(Permission.VIEW_CUSTOMERS)
   @ApiOperation({ summary: 'List members who have at least one account (for account officer assignment)' })
   async listMembersWithAccounts(
     @Query('query') query?: string,

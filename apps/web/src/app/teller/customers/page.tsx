@@ -44,6 +44,7 @@ function CustomersPageContent() {
   const [pageSize, setPageSize] = useState<number>(DEFAULT_PAGE_SIZE);
   const [meta, setMeta] = useState<PaginationMeta | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
 
   useEffect(() => {
     const q = searchParams.get('search') || '';
@@ -55,6 +56,7 @@ function CustomersPageContent() {
 
   async function loadCustomers(q: string, pageNum: number, limit: number) {
     setLoading(true);
+    setLoadError('');
     try {
       const params = new URLSearchParams({
         query: q,
@@ -69,9 +71,10 @@ function CustomersPageContent() {
       setCustomers(res.data ?? []);
       setMeta(res.meta ?? null);
       setPage(pageNum);
-    } catch {
+    } catch (err: unknown) {
       setCustomers([]);
       setMeta(null);
+      setLoadError((err as { message?: string })?.message || 'Could not load customers');
     } finally {
       setLoading(false);
     }
@@ -135,6 +138,12 @@ function CustomersPageContent() {
         <p className="-mt-4 mb-6 text-sm text-gray-500">
           Large member lists are split into pages. Search by name, phone, or account number to find someone quickly.
         </p>
+
+        {loadError && (
+          <div className="mb-6 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-800">
+            {loadError}. If the server was updated recently, run database migrations on Railway (Account officers update), then redeploy the API.
+          </div>
+        )}
 
         <Card>
           <div className="overflow-x-auto">

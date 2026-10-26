@@ -177,10 +177,32 @@ export default function DashboardPage() {
                 </div>
               </Card>
 
-              {isManager && (
+              {user?.role === UserRole.ADMIN && (
+                <Card title="Administration" subtitle="Head office tasks">
+                  <div className="space-y-2">
+                    {[
+                      { href: '/admin/account-officers', label: 'Account officers', desc: 'Assign officers to members' },
+                      { href: '/admin/settings', label: 'Settings', desc: 'Settlement accounts and platform tools' },
+                      { href: '/admin/users', label: 'User management', desc: 'Staff accounts and roles' },
+                    ].map((link) => (
+                      <Link
+                        key={link.href}
+                        href={link.href}
+                        className="block rounded-lg border border-gray-100 px-4 py-3 transition hover:border-brand-200 hover:bg-brand-50/50"
+                      >
+                        <p className="text-sm font-semibold text-gray-900">{link.label}</p>
+                        <p className="text-xs text-gray-500">{link.desc}</p>
+                      </Link>
+                    ))}
+                  </div>
+                </Card>
+              )}
+
+              {user?.role === UserRole.MANAGER && (
                 <Card title="Quick links" subtitle="Common manager tasks">
                   <div className="space-y-2">
                     {[
+                      { href: '/manager/account-officers', label: 'Account officers', desc: 'Assign officers to members' },
                       { href: '/manager/operations', label: 'Operations queue', desc: 'Approve pending transactions' },
                       { href: '/manager/reconciliation', label: 'Reconciliation', desc: 'Ledger vs bank balances' },
                       { href: '/manager/approvals', label: 'Loan approvals', desc: 'Review loan applications' },

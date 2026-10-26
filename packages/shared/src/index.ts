@@ -13,6 +13,7 @@ export enum Permission {
   REGISTER_CUSTOMER = 'register:customer',
   OPEN_ACCOUNT = 'open:account',
   VIEW_CUSTOMERS = 'view:customers',
+  ASSIGN_ACCOUNT_OFFICER = 'assign:account_officer',
 
   // Transactions
   SUBMIT_DEPOSIT = 'submit:deposit',
@@ -57,6 +58,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   [UserRole.MANAGER]: [
     Permission.VIEW_USERS,
     Permission.VIEW_CUSTOMERS,
+    Permission.ASSIGN_ACCOUNT_OFFICER,
     Permission.REGISTER_CUSTOMER,
     Permission.OPEN_ACCOUNT,
     Permission.VIEW_TRANSACTIONS,

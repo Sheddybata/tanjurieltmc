@@ -4,7 +4,8 @@ import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
 import { AuditAction } from '@tanjuriel/database';
-import { JwtPayload, AuthTokens, UserRole } from '@tanjuriel/shared';
+import { AuthTokens, UserRole } from '@tanjuriel/shared';
+import { staffJwtPayloadFromUser } from '../../common/utils/staff-jwt.util';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { LoginDto, ChangePasswordDto } from './dto/auth.dto';
@@ -38,14 +39,7 @@ export class AuthService {
       data: { lastLoginAt: new Date() },
     });
 
-    const tokens = await this.generateTokens({
-      sub: user.id,
-      authType: 'staff',
-      email: user.email,
-      role: user.role as UserRole,
-      branchId: user.branchId ?? undefined,
-      employeeId: user.employeeId,
-    });
+    const tokens = await this.generateTokens(staffJwtPayloadFromUser(user));
 
     await this.auditService.log({
       action: AuditAction.LOGIN,
@@ -72,14 +66,7 @@ export class AuthService {
 
     await this.prisma.refreshToken.delete({ where: { id: stored.id } });
 
-    return this.generateTokens({
-      sub: stored.user.id,
-      authType: 'staff',
-      email: stored.user.email,
-      role: stored.user.role as UserRole,
-      branchId: stored.user.branchId ?? undefined,
-      employeeId: stored.user.employeeId,
-    });
+    return this.generateTokens(staffJwtPayloadFromUser(stored.user));
   }
 
   async logout(userId: string, refreshToken?: string): Promise<void> {
@@ -109,7 +96,7 @@ export class AuthService {
     await this.prisma.refreshToken.deleteMany({ where: { userId } });
   }
 
-  private async generateTokens(payload: JwtPayload): Promise<AuthTokens> {
+  private async generateTokens(payload: ReturnType<typeof staffJwtPayloadFromUser>): Promise<AuthTokens> {
     const accessToken = this.jwtService.sign(payload);
     const refreshToken = uuidv4();
     const refreshExpires = this.config.get<string>('JWT_REFRESH_EXPIRES_IN') || '7d';

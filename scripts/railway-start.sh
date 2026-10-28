@@ -5,8 +5,31 @@ normalize_url() {
   printf '%s' "$1" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e 's/^"//' -e 's/"$//' -e "s/^'//" -e "s/'$//"
 }
 
+# Supabase session pooler allows ~15 sessions; Prisma must not open a large pool.
+append_connection_limit_if_needed() {
+  url="$1"
+  case "$url" in
+    *connection_limit=*)
+      printf '%s' "$url"
+      return
+      ;;
+  esac
+  case "$url" in
+    *pooler.supabase.com*|*:6543*|*pgbouncer=true*)
+      case "$url" in
+        *\?*) sep='&' ;;
+        *) sep='?' ;;
+      esac
+      printf '%s%sconnection_limit=1' "$url" "$sep"
+      ;;
+    *)
+      printf '%s' "$url"
+      ;;
+  esac
+}
+
 if [ -n "$DATABASE_URL" ]; then
-  DATABASE_URL="$(normalize_url "$DATABASE_URL")"
+  DATABASE_URL="$(append_connection_limit_if_needed "$(normalize_url "$DATABASE_URL")")"
   export DATABASE_URL
 fi
 
@@ -31,8 +54,11 @@ else
       ;;
   esac
   case "$DATABASE_URL" in
-    *:6543*|*pgbouncer=true*)
-      echo "==> WARN: use session pooler port 5432 on Railway, not 6543/pgbouncer"
+    *connection_limit=1*)
+      echo "==> DATABASE_URL uses connection_limit=1 (recommended for Supabase pooler)"
+      ;;
+    *pooler.supabase.com*:5432*)
+      echo "==> WARN: session pooler — ensure connection_limit=1 or use db.[ref].supabase.co direct"
       ;;
   esac
 fi
@@ -43,8 +69,9 @@ if [ -n "$DATABASE_URL" ] && [ -z "$DIRECT_DATABASE_URL" ]; then
 fi
 
 if [ -n "$DATABASE_URL" ]; then
-  echo "==> Running prisma migrate deploy..."
-  if npm run db:migrate:deploy; then
+  echo "==> Running prisma migrate deploy (via DIRECT_DATABASE_URL when set)..."
+  MIGRATE_DATABASE_URL="${DIRECT_DATABASE_URL:-$DATABASE_URL}"
+  if DATABASE_URL="$(normalize_url "$MIGRATE_DATABASE_URL")" npm run db:migrate:deploy; then
     echo "==> Migrations complete"
   else
     echo "==> ERROR: migrate failed — API will start but customer login and new features may fail"

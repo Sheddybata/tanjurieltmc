@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { publicSiteUrl } from '@/lib/domains';
 import { BrandLogo } from '@/components/brand-logo';
+import { staffHomePath, StaffRole } from '@/lib/role-access';
+import type { UserProfile } from '@/lib/api';
 
 const showDemoAccounts = process.env.NEXT_PUBLIC_SHOW_DEMO_ACCOUNTS === 'true';
 const publicHomeUrl = publicSiteUrl('/');
@@ -29,7 +31,9 @@ export default function StaffLoginPage() {
 
     try {
       await login(email, password);
-      router.push('/dashboard');
+      const stored = localStorage.getItem('user');
+      const profile = stored ? (JSON.parse(stored) as UserProfile) : null;
+      router.push(staffHomePath((profile?.role ?? 'TELLER') as StaffRole));
     } catch (err: unknown) {
       setError((err as { message?: string })?.message || 'Invalid credentials');
     } finally {

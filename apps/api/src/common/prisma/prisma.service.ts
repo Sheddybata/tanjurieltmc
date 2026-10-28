@@ -1,29 +1,29 @@
 import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
-import { PrismaClient } from '@tanjuriel/database';
+import { PrismaClient, resolvePrismaDatabaseUrl } from '@tanjuriel/database';
 
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
+  constructor() {
+    const url = resolvePrismaDatabaseUrl(process.env.DATABASE_URL);
+    super({
+      ...(url ? { datasources: { db: { url } } } : {}),
+      log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+    });
+  }
+
   async onModuleInit() {
-    await this.connectWithRetry();
+    try {
+      await this.$connect();
+      console.log('Database connected');
+    } catch (error) {
+      console.error(
+        'Database connect failed on startup — check DATABASE_URL (use direct Postgres or pooler with connection_limit=1):',
+        error,
+      );
+    }
   }
 
   async onModuleDestroy() {
     await this.$disconnect();
-  }
-
-  private async connectWithRetry(maxAttempts = 5) {
-    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      try {
-        await this.$connect();
-        console.log('Database connected');
-        return;
-      } catch (error) {
-        console.error(`Database connect attempt ${attempt}/${maxAttempts} failed:`, error);
-        if (attempt < maxAttempts) {
-          await new Promise((resolve) => setTimeout(resolve, 2000));
-        }
-      }
-    }
-    console.error('Database never connected — login and data routes will fail until DATABASE_URL is fixed');
   }
 }

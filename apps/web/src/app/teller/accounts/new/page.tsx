@@ -13,12 +13,14 @@ import { formatMoneyForApi } from '@/lib/utils';
 import { TELLER_OPEN_ACCOUNT_TYPES } from '@/lib/account-types';
 import { CONTRIBUTION_FREQUENCY_OPTIONS } from '@/lib/contribution-frequency';
 import { formatCustomerOptionLabel } from '@/lib/member-id';
+import { ACCOUNT_OFFICERS, accountOfficerLabel, type AccountOfficerCode } from '@/lib/account-officers';
 
 interface CustomerOption {
   id: string;
   firstName: string;
   lastName: string;
   phone: string;
+  accountOfficer?: string | null;
   accounts?: { accountNumber: string; type: string }[];
 }
 
@@ -35,6 +37,10 @@ function OpenAccountForm() {
   const [accountType, setAccountType] = useState('SAVINGS');
   const [contributionFrequency, setContributionFrequency] = useState('DAILY');
   const [photoName, setPhotoName] = useState('');
+  const [accountOfficer, setAccountOfficer] = useState<AccountOfficerCode | ''>('');
+
+  const selectedCustomer = customers.find((c) => c.id === customerId);
+  const needsAccountOfficer = Boolean(customerId && !selectedCustomer?.accountOfficer);
 
   const showFrequency = accountType === 'DAILY_SAVINGS' || accountType === 'MY_PIKIN';
   const isChildSavings = accountType === 'MY_PIKIN';
@@ -66,11 +72,20 @@ function OpenAccountForm() {
       return;
     }
 
+    if (needsAccountOfficer && !accountOfficer) {
+      setMessage('Select an account officer for this member before opening the account.');
+      setLoading(false);
+      return;
+    }
+
     const form = new FormData(e.currentTarget);
     form.set('customerId', customerId);
     form.set('type', accountType);
     if (showFrequency) {
       form.set('contributionFrequency', contributionFrequency);
+    }
+    if (needsAccountOfficer && accountOfficer) {
+      form.set('accountOfficer', accountOfficer);
     }
 
     const initialDeposit = form.get('initialDeposit');
@@ -118,7 +133,10 @@ function OpenAccountForm() {
           label="Customer"
           required
           value={customerId}
-          onChange={(e) => setCustomerId(e.target.value)}
+          onChange={(e) => {
+            setCustomerId(e.target.value);
+            setAccountOfficer('');
+          }}
           options={[
             { value: '', label: customers.length ? 'Select customer...' : 'No customers loaded' },
             ...customers.map((c) => ({
@@ -127,6 +145,23 @@ function OpenAccountForm() {
             })),
           ]}
         />
+        {selectedCustomer?.accountOfficer && (
+          <p className="text-sm text-gray-600">
+            Account officer: <span className="font-medium text-gray-900">{accountOfficerLabel(selectedCustomer.accountOfficer)}</span>
+          </p>
+        )}
+        {needsAccountOfficer && (
+          <Select
+            label="Account officer"
+            required
+            value={accountOfficer}
+            onChange={(e) => setAccountOfficer(e.target.value as AccountOfficerCode)}
+            options={[
+              { value: '', label: 'Select account officer…' },
+              ...ACCOUNT_OFFICERS.map((o) => ({ value: o.value, label: o.label })),
+            ]}
+          />
+        )}
         <Select
           name="type"
           label="Account Type"

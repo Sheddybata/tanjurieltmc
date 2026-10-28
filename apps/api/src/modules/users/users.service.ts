@@ -10,16 +10,31 @@ export class UsersService {
   constructor(private prisma: PrismaService) {}
 
   async create(dto: CreateUserDto) {
-    if (dto.role !== UserRole.TELLER && dto.role !== UserRole.MANAGER) {
-      throw new BadRequestException('Only teller and manager accounts can be created here');
+    const allowedRoles: UserRole[] = [UserRole.TELLER, UserRole.MANAGER, UserRole.ACCOUNT_OFFICER];
+    if (!allowedRoles.includes(dto.role)) {
+      throw new BadRequestException('Only teller, manager, and account officer accounts can be created here');
     }
-    if (!dto.branchId) {
-      throw new BadRequestException('Branch is required for teller and manager accounts');
+
+    if (dto.role === UserRole.ACCOUNT_OFFICER) {
+      if (!dto.accountOfficer) {
+        throw new BadRequestException('Select which account officer this login represents');
+      }
+      const taken = await this.prisma.user.findFirst({
+        where: { accountOfficer: dto.accountOfficer },
+      });
+      if (taken) {
+        throw new ConflictException('An login already exists for this account officer');
+      }
+    } else {
+      if (!dto.branchId) {
+        throw new BadRequestException('Branch is required for teller and manager accounts');
+      }
+      const branch = await this.prisma.branch.findFirst({
+        where: { id: dto.branchId, isActive: true },
+      });
+      if (!branch) throw new BadRequestException('Invalid or inactive branch');
     }
-    const branch = await this.prisma.branch.findFirst({
-      where: { id: dto.branchId, isActive: true },
-    });
-    if (!branch) throw new BadRequestException('Invalid or inactive branch');
+
     const existing = await this.prisma.user.findFirst({
       where: { OR: [{ email: dto.email.toLowerCase() }, { employeeId: dto.employeeId }] },
     });
@@ -29,8 +44,14 @@ export class UsersService {
     const { password: _password, ...userData } = dto;
     const user = await this.prisma.user.create({
       data: {
-        ...userData,
+        employeeId: userData.employeeId,
         email: dto.email.toLowerCase(),
+        firstName: userData.firstName,
+        lastName: userData.lastName,
+        phone: userData.phone,
+        role: userData.role,
+        branchId: userData.role === UserRole.ACCOUNT_OFFICER ? null : userData.branchId,
+        accountOfficer: userData.role === UserRole.ACCOUNT_OFFICER ? userData.accountOfficer : null,
         passwordHash,
       },
       include: { branch: true },
@@ -72,7 +93,13 @@ export class UsersService {
   }
 
   async update(id: string, dto: UpdateUserDto) {
-    await this.findOne(id);
+    const current = await this.findOne(id);
+    if (dto.accountOfficer && dto.accountOfficer !== current.accountOfficer) {
+      const taken = await this.prisma.user.findFirst({
+        where: { accountOfficer: dto.accountOfficer, id: { not: id } },
+      });
+      if (taken) throw new ConflictException('Another user is already linked to this account officer');
+    }
     const user = await this.prisma.user.update({
       where: { id },
       data: dto,

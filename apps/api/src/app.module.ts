@@ -15,6 +15,7 @@ import { CustomerAuthModule } from './modules/customer-auth/customer-auth.module
 import { CustomerPortalModule } from './modules/customer/customer-portal.module';
 import { SettingsModule } from './modules/settings/settings.module';
 import { HealthModule } from './modules/health/health.module';
+import { AccountOfficerModule } from './modules/account-officer/account-officer.module';
 import { SchedulerModule } from './modules/scheduler/scheduler.module';
 import { PrismaModule } from './common/prisma/prisma.module';
 import { CacheModule } from './common/cache/cache.module';
@@ -41,6 +42,7 @@ import { AuditInterceptor } from './common/interceptors/audit.interceptor';
     CustomerPortalModule,
     SettingsModule,
     HealthModule,
+    AccountOfficerModule,
     SchedulerModule,
   ],
   providers: [

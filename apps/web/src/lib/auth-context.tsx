@@ -28,7 +28,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const parsed = JSON.parse(stored) as UserProfile;
         setUser(parsed);
-        await api.get('/reporting/dashboard');
+        if (parsed.role === 'ACCOUNT_OFFICER') {
+          await api.get('/account-officer/summary');
+        } else {
+          await api.get('/reporting/dashboard');
+        }
       } catch {
         localStorage.clear();
         setUser(null);

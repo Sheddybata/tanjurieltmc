@@ -19,6 +19,7 @@ import {
   showsEmployerFields,
   showsEmploymentDate,
 } from '@/lib/customer-registration-options';
+import { ACCOUNT_OFFICERS, type AccountOfficerCode } from '@/lib/account-officers';
 
 export function CustomerRegistrationWizard() {
   const router = useRouter();
@@ -59,6 +60,7 @@ export function CustomerRegistrationWizard() {
   const [officePhone, setOfficePhone] = useState('');
   const [officeState, setOfficeState] = useState('');
   const [officeLga, setOfficeLga] = useState('');
+  const [accountOfficer, setAccountOfficer] = useState<AccountOfficerCode | ''>('');
   const [pin, setPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
 
@@ -97,6 +99,7 @@ export function CustomerRegistrationWizard() {
         if (!photoFile) return 'Member photo is required';
         return null;
       case 5:
+        if (!accountOfficer) return 'Select an account officer for this member';
         if (pin.length < 4 || pin.length > 6) return 'PIN must be 4–6 digits';
         if (pin !== confirmPin) return 'PINs do not match';
         return null;
@@ -155,6 +158,7 @@ export function CustomerRegistrationWizard() {
       if (officeState) form.append('officeState', officeState);
       if (officeLga) form.append('officeLga', officeLga);
       form.append('pin', pin);
+      form.append('accountOfficer', accountOfficer);
       if (photoFile) form.append('customerPhoto', photoFile);
 
       const res = await api.post<{ success: boolean; data: { id: string; phone: string } }>(
@@ -286,6 +290,19 @@ export function CustomerRegistrationWizard() {
 
       {step === 5 && (
         <div className="grid max-w-md gap-4">
+          <Select
+            label="Account officer"
+            value={accountOfficer}
+            onChange={(e) => setAccountOfficer(e.target.value as AccountOfficerCode)}
+            required
+            options={[
+              { value: '', label: 'Select account officer…' },
+              ...ACCOUNT_OFFICERS.map((o) => ({ value: o.value, label: o.label })),
+            ]}
+          />
+          <p className="text-sm text-gray-600">
+            This officer is responsible for the member across savings, loans, and other products.
+          </p>
           <p className="text-sm text-gray-600">Set a PIN the member will use to log in on the mobile app.</p>
           <Input label="Create PIN (4–6 digits)" value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 6))} maxLength={6} />
           <Input label="Confirm PIN" value={confirmPin} onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, '').slice(0, 6))} maxLength={6} />

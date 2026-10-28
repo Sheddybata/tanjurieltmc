@@ -9,7 +9,7 @@ import {
   IsNotEmpty,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional, OmitType } from '@nestjs/swagger';
-import { Gender, AccountType, ContributionFrequency } from '@tanjuriel/database';
+import { AccountOfficer, Gender, AccountType, ContributionFrequency } from '@tanjuriel/database';
 import { IsEntityId } from '../../../common/validators/entity-id.decorator';
 import { IsMoneyAmount, TransformMoney } from '../../../common/validators/money.decorator';
 import { CustomerApplyLoanDto } from '../../customer/dto/customer-loan.dto';
@@ -71,6 +71,11 @@ export class OpenAccountDto {
   @IsOptional()
   @IsString()
   motherName?: string;
+
+  @ApiPropertyOptional({ enum: AccountOfficer, description: 'Assign account officer if member has none yet' })
+  @IsOptional()
+  @IsEnum(AccountOfficer)
+  accountOfficer?: AccountOfficer;
 }
 
 export class EnableMobileAccessDto {

@@ -29,6 +29,7 @@ import {
   paginationMeta,
 
 } from '../../common/utils/reference.util';
+import { accountOfficerAssignmentData, accountOfficerCreateFields } from '../../common/utils/account-officer-assignment.util';
 
 import { RegisterCustomerDto, OpenAccountDto, TransactionDto, EnableMobileAccessDto, LoanRepaymentDto, TellerTransferDto, TellerApplyLoanDto, TellerLoanQuoteDto } from './dto/teller.dto';
 
@@ -105,6 +106,7 @@ export class TellerService {
           customerNumber,
           paymentRef: generatePaymentRef(accountNumber),
           ...customerProfileCreateData({ ...dto, phone, alternatePhone }, photoUrl),
+          ...accountOfficerCreateFields(dto.accountOfficer, user.sub),
           pinHash,
           appEnabled: Boolean(pinHash),
           kycStatus: CustomerKycStatus.PENDING,
@@ -349,6 +351,13 @@ export class TellerService {
         await tx.customer.update({
           where: { id: dto.customerId },
           data: { paymentRef: generatePaymentRef(newAccount.accountNumber) },
+        });
+      }
+
+      if (dto.accountOfficer && !customer.accountOfficer) {
+        await tx.customer.update({
+          where: { id: dto.customerId },
+          data: accountOfficerAssignmentData(dto.accountOfficer, user.sub),
         });
       }
 

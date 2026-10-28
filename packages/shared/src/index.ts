@@ -2,6 +2,7 @@ export enum UserRole {
   ADMIN = 'ADMIN',
   MANAGER = 'MANAGER',
   TELLER = 'TELLER',
+  ACCOUNT_OFFICER = 'ACCOUNT_OFFICER',
 }
 
 export enum Permission {
@@ -14,6 +15,7 @@ export enum Permission {
   OPEN_ACCOUNT = 'open:account',
   VIEW_CUSTOMERS = 'view:customers',
   ASSIGN_ACCOUNT_OFFICER = 'assign:account_officer',
+  VIEW_OWN_PORTFOLIO = 'view:own_portfolio',
 
   // Transactions
   SUBMIT_DEPOSIT = 'submit:deposit',
@@ -91,6 +93,10 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.VIEW_LOANS,
     Permission.DELETE_LOAN,
   ],
+  [UserRole.ACCOUNT_OFFICER]: [
+    Permission.VIEW_OWN_PORTFOLIO,
+    Permission.VIEW_DASHBOARD,
+  ],
 };
 
 export const CURRENCY = 'NGN' as const;
@@ -147,6 +153,8 @@ export interface JwtPayload {
   branchId?: string;
   employeeId?: string;
   customerId?: string;
+  /** Set when role is ACCOUNT_OFFICER — matches Customer.accountOfficer */
+  accountOfficer?: string;
 }
 
 export interface CustomerJwtPayload {

@@ -14,6 +14,7 @@ enum UserRole {
   ADMIN
   MANAGER
   TELLER
+  ACCOUNT_OFFICER
 }
 
 enum UserStatus {
@@ -274,10 +275,11 @@ model User {
   firstName    String
   lastName     String
   phone        String?
-  role         UserRole
-  status       UserStatus @default(ACTIVE)
-  branchId     String?
-  lastLoginAt  DateTime?
+  role           UserRole
+  status         UserStatus @default(ACTIVE)
+  branchId       String?
+  accountOfficer AccountOfficer?
+  lastLoginAt    DateTime?
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
@@ -293,6 +295,7 @@ model User {
   requestApprovals    PaymentRequestApproval[]
   notifications       Notification[]
 
+  @@unique([accountOfficer])
   @@index([role])
   @@index([branchId])
   @@map("users")

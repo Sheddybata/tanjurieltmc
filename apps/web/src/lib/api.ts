@@ -207,7 +207,8 @@ export interface UserProfile {
   email: string;
   firstName: string;
   lastName: string;
-  role: 'ADMIN' | 'MANAGER' | 'TELLER';
+  role: 'ADMIN' | 'MANAGER' | 'TELLER' | 'ACCOUNT_OFFICER';
+  accountOfficer?: string | null;
   branch?: { id: string; name: string; code: string };
 }
 

@@ -1,9 +1,9 @@
-import { IsEmail, IsEnum, IsOptional, IsString, MinLength } from 'class-validator';
+import { IsEmail, IsEnum, IsOptional, IsString, MinLength, ValidateIf } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { UserRole, UserStatus } from '@tanjuriel/database';
+import { AccountOfficer, UserRole, UserStatus } from '@tanjuriel/database';
 import { IsEntityId } from '../../../common/validators/entity-id.decorator';
 
-const STAFF_ROLES = [UserRole.TELLER, UserRole.MANAGER] as const;
+const STAFF_ROLES = [UserRole.TELLER, UserRole.MANAGER, UserRole.ACCOUNT_OFFICER] as const;
 
 export class CreateUserDto {
   @ApiProperty()
@@ -36,9 +36,15 @@ export class CreateUserDto {
   @IsEnum(UserRole)
   role: UserRole;
 
-  @ApiProperty()
+  @ApiPropertyOptional({ description: 'Required for teller and manager' })
+  @ValidateIf((o: CreateUserDto) => o.role === UserRole.TELLER || o.role === UserRole.MANAGER)
   @IsEntityId()
-  branchId: string;
+  branchId?: string;
+
+  @ApiPropertyOptional({ enum: AccountOfficer, description: 'Required for account officer logins' })
+  @ValidateIf((o: CreateUserDto) => o.role === UserRole.ACCOUNT_OFFICER)
+  @IsEnum(AccountOfficer)
+  accountOfficer?: AccountOfficer;
 }
 
 export class UpdateUserDto {
@@ -71,6 +77,11 @@ export class UpdateUserDto {
   @IsOptional()
   @IsEnum(UserStatus)
   status?: UserStatus;
+
+  @ApiPropertyOptional({ enum: AccountOfficer })
+  @IsOptional()
+  @IsEnum(AccountOfficer)
+  accountOfficer?: AccountOfficer;
 }
 
 export class ResetUserPasswordDto {

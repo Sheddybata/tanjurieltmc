@@ -96,6 +96,10 @@ export const NAV_ITEMS: NavItem[] = [
 
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.TELLER], group: 'overview' },
 
+  { label: 'Portfolio overview', href: '/account-officer/dashboard', icon: LayoutDashboard, roles: [UserRole.ACCOUNT_OFFICER], group: 'overview' },
+  { label: 'My customers', href: '/account-officer/customers', icon: Users, roles: [UserRole.ACCOUNT_OFFICER], group: 'overview' },
+  { label: 'Loan follow-up', href: '/account-officer/loan-follow-up', icon: Banknote, roles: [UserRole.ACCOUNT_OFFICER], group: 'overview' },
+
   { label: 'Register Customer', href: '/teller/customers/new', icon: UserPlus, roles: [UserRole.TELLER], group: 'teller' },
 
   { label: 'Mobile Registrations', href: '/teller/registrations', icon: ClipboardList, roles: [UserRole.TELLER], group: 'teller' },
@@ -187,6 +191,8 @@ export const ROLE_LABELS: Record<UserRole, string> = {
 
   [UserRole.TELLER]: 'Teller',
 
+  [UserRole.ACCOUNT_OFFICER]: 'Account Officer',
+
 };
 
 
@@ -198,6 +204,8 @@ export const ROLE_COLORS: Record<UserRole, string> = {
   [UserRole.MANAGER]: 'bg-blue-100 text-blue-700',
 
   [UserRole.TELLER]: 'bg-emerald-100 text-emerald-700',
+
+  [UserRole.ACCOUNT_OFFICER]: 'bg-amber-100 text-amber-800',
 
 };
 

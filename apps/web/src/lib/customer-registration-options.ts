@@ -51,7 +51,7 @@ export const REGISTRATION_STEP_TITLES = [
   'Valid means of identification',
   'Employment details',
   'Member photo',
-  'Create PIN',
+  'Account officer & PIN',
 ] as const;
 
 export { calculateAge, genderLabel, maritalLabel };

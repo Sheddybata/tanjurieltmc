@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { api } from '@/lib/api';
 import { ROLE_COLORS, ROLE_LABELS } from '@/lib/navigation';
 import { UserRole } from '@tanjuriel/shared';
+import { ACCOUNT_OFFICERS, accountOfficerLabel, type AccountOfficerCode } from '@/lib/account-officers';
 import { useToast } from '@/components/ui/toast-provider';
 
 interface BranchOption {
@@ -28,9 +29,10 @@ interface SystemUser {
   status: string;
   branchId?: string | null;
   branch?: { id: string; name: string };
+  accountOfficer?: string | null;
 }
 
-const STAFF_ROLES = [UserRole.TELLER, UserRole.MANAGER];
+const STAFF_ROLES = [UserRole.TELLER, UserRole.MANAGER, UserRole.ACCOUNT_OFFICER];
 
 const emptyCreateForm = {
   employeeId: '',
@@ -41,6 +43,7 @@ const emptyCreateForm = {
   phone: '',
   role: UserRole.TELLER,
   branchId: '',
+  accountOfficer: '' as AccountOfficerCode | '',
 };
 
 export default function UsersAdminPage() {
@@ -89,16 +92,32 @@ export default function UsersAdminPage() {
 
   async function handleCreate(e: FormEvent) {
     e.preventDefault();
-    if (!createForm.branchId) {
+    if (createForm.role === UserRole.ACCOUNT_OFFICER) {
+      if (!createForm.accountOfficer) {
+        showToast('Select which account officer this login is for', 'error');
+        return;
+      }
+    } else if (!createForm.branchId) {
       showToast('Select a branch for this staff member', 'error');
       return;
     }
     setCreating(true);
     try {
-      await api.post('/users', {
-        ...createForm,
+      const payload: Record<string, unknown> = {
+        employeeId: createForm.employeeId,
+        email: createForm.email,
+        password: createForm.password,
+        firstName: createForm.firstName,
+        lastName: createForm.lastName,
         phone: createForm.phone || undefined,
-      });
+        role: createForm.role,
+      };
+      if (createForm.role === UserRole.ACCOUNT_OFFICER) {
+        payload.accountOfficer = createForm.accountOfficer;
+      } else {
+        payload.branchId = createForm.branchId;
+      }
+      await api.post('/users', payload);
       showToast('Staff account created', 'success');
       setShowCreate(false);
       setCreateForm({ ...emptyCreateForm, branchId: branches.length === 1 ? branches[0].id : '' });
@@ -211,16 +230,38 @@ export default function UsersAdminPage() {
               <Select
                 label="Role"
                 value={createForm.role}
-                onChange={(e) => setCreateForm({ ...createForm, role: e.target.value as UserRole })}
+                onChange={(e) =>
+                  setCreateForm({
+                    ...createForm,
+                    role: e.target.value as UserRole,
+                    branchId: e.target.value === UserRole.ACCOUNT_OFFICER ? '' : createForm.branchId,
+                    accountOfficer: e.target.value === UserRole.ACCOUNT_OFFICER ? createForm.accountOfficer : '',
+                  })
+                }
                 options={STAFF_ROLES.map((r) => ({ value: r, label: ROLE_LABELS[r] }))}
               />
-              <Select
-                label="Branch"
-                value={createForm.branchId}
-                onChange={(e) => setCreateForm({ ...createForm, branchId: e.target.value })}
-                options={branchOptions}
-                required
-              />
+              {createForm.role === UserRole.ACCOUNT_OFFICER ? (
+                <Select
+                  label="Account officer profile"
+                  value={createForm.accountOfficer}
+                  onChange={(e) =>
+                    setCreateForm({ ...createForm, accountOfficer: e.target.value as AccountOfficerCode })
+                  }
+                  options={[
+                    { value: '', label: 'Select officer…' },
+                    ...ACCOUNT_OFFICERS.map((o) => ({ value: o.value, label: o.label })),
+                  ]}
+                  required
+                />
+              ) : (
+                <Select
+                  label="Branch"
+                  value={createForm.branchId}
+                  onChange={(e) => setCreateForm({ ...createForm, branchId: e.target.value })}
+                  options={branchOptions}
+                  required
+                />
+              )}
               <Input
                 label="Permanent password"
                 type="password"
@@ -272,7 +313,14 @@ export default function UsersAdminPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {users.filter((u) => u.role === UserRole.TELLER || u.role === UserRole.MANAGER).map((u) => (
+                  {users
+                    .filter(
+                      (u) =>
+                        u.role === UserRole.TELLER ||
+                        u.role === UserRole.MANAGER ||
+                        u.role === UserRole.ACCOUNT_OFFICER,
+                    )
+                    .map((u) => (
                     <tr key={u.id} className="border-b border-gray-50">
                       <td className="py-3 pr-4 font-mono text-xs">{u.employeeId}</td>
                       <td className="py-3 pr-4 font-medium">{u.firstName} {u.lastName}</td>
@@ -281,7 +329,9 @@ export default function UsersAdminPage() {
                         <span className={ROLE_COLORS[u.role as UserRole]}>{ROLE_LABELS[u.role as UserRole]}</span>
                       </td>
                       <td className="py-3 pr-4 text-gray-600">
-                        {assigningBranchUserId === u.id ? (
+                        {u.role === UserRole.ACCOUNT_OFFICER ? (
+                          u.accountOfficer ? accountOfficerLabel(u.accountOfficer) : '—'
+                        ) : assigningBranchUserId === u.id ? (
                           <div className="flex min-w-[200px] flex-col gap-2">
                             <Select
                               value={assignBranchId}
@@ -313,7 +363,7 @@ export default function UsersAdminPage() {
                       </td>
                       <td className="py-3">
                         <div className="flex flex-wrap gap-2">
-                          {!u.branch?.name && assigningBranchUserId !== u.id && (
+                          {u.role !== UserRole.ACCOUNT_OFFICER && !u.branch?.name && assigningBranchUserId !== u.id && (
                             <button
                               type="button"
                               className="text-xs font-medium text-brand-600 hover:underline"

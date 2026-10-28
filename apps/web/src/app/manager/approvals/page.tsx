@@ -16,6 +16,7 @@ import {
   DetailField,
 } from '@/components/ui/split-queue-layout';
 import { api } from '@/lib/api';
+import { apiAssetUrl } from '@/lib/api-origin';
 import { formatCurrency, formatDate } from '@/lib/utils';
 
 interface LoanProduct {
@@ -209,16 +210,16 @@ export default function ApprovalsPage() {
                         {selected.collateralPhotoUrl && (
                           <div className="mt-4">
                             <p className="mb-2 text-xs font-medium text-gray-500">Photo evidence</p>
-                            <div className="flex h-40 items-center justify-center rounded-lg border border-dashed border-gray-200 bg-gray-50 text-sm text-gray-500">
-                              {selected.collateralPhotoUrl.startsWith('http') || selected.collateralPhotoUrl.startsWith('/uploads') ? (
+                            <div className="flex h-40 items-center justify-center overflow-hidden rounded-lg border border-dashed border-gray-200 bg-gray-50 text-sm text-gray-500">
+                              {apiAssetUrl(selected.collateralPhotoUrl) ? (
                                 // eslint-disable-next-line @next/next/no-img-element
                                 <img
-                                  src={selected.collateralPhotoUrl}
+                                  src={apiAssetUrl(selected.collateralPhotoUrl)!}
                                   alt="Collateral"
                                   className="max-h-full max-w-full rounded-lg object-contain"
                                 />
                               ) : (
-                                <span className="font-mono text-xs">{selected.collateralPhotoUrl}</span>
+                                <span className="px-2 text-xs text-gray-400">Photo unavailable</span>
                               )}
                             </div>
                           </div>

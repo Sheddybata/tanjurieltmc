@@ -23,6 +23,7 @@ import { CustomerOpenAccountDto } from './dto/customer-open-account.dto';
 import { NameEnquiryDto } from './dto/transfer.dto';
 import { ensureCustomerKycVerified } from '../../common/utils/kyc.util';
 import { customerAccountsInclude } from '../../common/utils/account-select.util';
+import { withLoanDisplayMediaUrls } from '../../common/utils/display-media-url.util';
 import { memberPaymentRef, primaryMemberAccountNumber } from '../../common/utils/member-id.util';
 import {
   assertChildSavingsOpenInput,
@@ -387,7 +388,7 @@ export class CustomerPortalService {
     });
 
     if (!loan) throw new NotFoundException('Loan not found');
-    return loan;
+    return withLoanDisplayMediaUrls(loan);
   }
 
   async quoteLoan(dto: CustomerLoanQuoteDto) {

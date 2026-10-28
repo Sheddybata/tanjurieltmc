@@ -139,3 +139,9 @@ export async function withLoanDisplayMediaUrls<T extends Record<string, unknown>
     ),
   };
 }
+
+export async function withLoansDisplayMediaUrls<T extends Record<string, unknown>>(
+  loans: T[],
+): Promise<T[]> {
+  return Promise.all(loans.map((loan) => withLoanDisplayMediaUrls(loan)));
+}

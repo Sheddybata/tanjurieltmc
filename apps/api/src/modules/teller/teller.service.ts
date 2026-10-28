@@ -33,6 +33,7 @@ import { accountOfficerAssignmentData, accountOfficerCreateFields } from '../../
 import {
   withDisplayMediaUrls,
   withLoanDisplayMediaUrls,
+  withLoansDisplayMediaUrls,
 } from '../../common/utils/display-media-url.util';
 
 import { RegisterCustomerDto, OpenAccountDto, TransactionDto, EnableMobileAccessDto, LoanRepaymentDto, TellerTransferDto, TellerApplyLoanDto, TellerLoanQuoteDto } from './dto/teller.dto';
@@ -645,7 +646,7 @@ export class TellerService {
       this.prisma.loan.count({ where }),
     ]);
 
-    return { data: loans, meta: paginationMeta(total, p, l) };
+    return { data: await withLoansDisplayMediaUrls(loans), meta: paginationMeta(total, p, l) };
   }
 
   async getLoan(id: string) {

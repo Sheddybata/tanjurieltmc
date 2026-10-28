@@ -3,8 +3,8 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
   customerPhotoFilter,
-  customerPhotoPublicPath,
   customerPhotoStorage,
+  saveCustomerPhoto,
 } from '../../common/utils/customer-photo-upload.util';
 import { Public } from '../../common/decorators/auth.decorators';
 import { User } from '../../common/decorators/auth.decorators';
@@ -30,7 +30,7 @@ export class CustomerAuthController {
     }),
   )
   async register(@Body() dto: CustomerRegisterDto, @UploadedFile() customerPhoto?: Express.Multer.File) {
-    const photoUrl = customerPhoto ? customerPhotoPublicPath(customerPhoto.filename) : undefined;
+    const photoUrl = customerPhoto ? await saveCustomerPhoto(customerPhoto) : undefined;
     const result = await this.customerAuthService.register(dto, photoUrl);
     return { success: true, data: result };
   }

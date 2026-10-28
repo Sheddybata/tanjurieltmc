@@ -7,14 +7,13 @@ import { CustomerGuard, JwtAuthGuard } from '../../common/guards/auth.guards';
 import { CustomerJwtPayload } from '@tanjuriel/shared';
 import {
   childSavingsPhotoFilter,
-  childSavingsPhotoPublicPath,
   childSavingsPhotoStorage,
 } from '../../common/utils/child-savings-upload.util';
 import {
   collateralPhotoFilter,
-  collateralPhotoPublicPath,
   collateralPhotoStorage,
 } from '../../common/utils/collateral-upload.util';
+import { persistUploadedImage } from '../../common/utils/object-storage.util';
 import { CustomerPortalService } from './customer-portal.service';
 import { ChildSavingsStatementService } from '../child-savings/child-savings-statement.service';
 import { CustomerDepositRequestDto, CustomerTransferRequestDto, CustomerWithdrawalRequestDto } from '../operations/dto/operations.dto';
@@ -53,7 +52,7 @@ export class CustomerPortalController {
     @Body() dto: CustomerOpenAccountDto,
     @UploadedFile() childPhoto?: Express.Multer.File,
   ) {
-    const photoUrl = childPhoto ? childSavingsPhotoPublicPath(childPhoto.filename) : undefined;
+    const photoUrl = childPhoto ? await persistUploadedImage('child-savings', childPhoto) : undefined;
     const data = await this.customerPortalService.openAccount(user.customerId, dto, photoUrl);
     return { success: true, data };
   }
@@ -231,7 +230,7 @@ export class CustomerPortalController {
     @UploadedFile() collateralPhoto?: Express.Multer.File,
   ) {
     const photoUrl = collateralPhoto
-      ? collateralPhotoPublicPath(collateralPhoto.filename)
+      ? await persistUploadedImage('collateral', collateralPhoto)
       : undefined;
     const data = await this.customerPortalService.applyForLoan(
       user.customerId,

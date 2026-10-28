@@ -1,27 +1,12 @@
-import { diskStorage } from 'multer';
-import { extname, join } from 'path';
-import { existsSync, mkdirSync } from 'fs';
+import { memoryStorage } from 'multer';
 import { BadRequestException } from '@nestjs/common';
-import { v4 as uuidv4 } from 'uuid';
-
-const uploadDir = join(process.cwd(), 'uploads', 'child-savings');
+import { ensureUploadDir } from './object-storage.util';
 
 export function ensureChildSavingsUploadDir() {
-  if (!existsSync(uploadDir)) {
-    mkdirSync(uploadDir, { recursive: true });
-  }
+  ensureUploadDir('child-savings');
 }
 
-export const childSavingsPhotoStorage = diskStorage({
-  destination: (_req, _file, cb) => {
-    ensureChildSavingsUploadDir();
-    cb(null, uploadDir);
-  },
-  filename: (_req, file, cb) => {
-    const ext = extname(file.originalname) || '.jpg';
-    cb(null, `${uuidv4()}${ext}`);
-  },
-});
+export const childSavingsPhotoStorage = memoryStorage();
 
 export function childSavingsPhotoFilter(
   _req: Express.Request,

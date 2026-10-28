@@ -27,17 +27,16 @@ import { JwtAuthGuard, PermissionsGuard } from '../../common/guards/auth.guards'
 import { Permissions, User } from '../../common/decorators/auth.decorators';
 import {
   childSavingsPhotoFilter,
-  childSavingsPhotoPublicPath,
   childSavingsPhotoStorage,
 } from '../../common/utils/child-savings-upload.util';
 import {
   customerPhotoFilter,
-  customerPhotoPublicPath,
   customerPhotoStorage,
+  saveCustomerPhoto,
 } from '../../common/utils/customer-photo-upload.util';
+import { persistUploadedImage } from '../../common/utils/object-storage.util';
 import {
   collateralPhotoFilter,
-  collateralPhotoPublicPath,
   collateralPhotoStorage,
 } from '../../common/utils/collateral-upload.util';
 import { ChildSavingsStatementService } from '../child-savings/child-savings-statement.service';
@@ -69,7 +68,7 @@ export class TellerController {
     @User() user: JwtPayload,
     @UploadedFile() customerPhoto?: Express.Multer.File,
   ) {
-    const photoUrl = customerPhoto ? customerPhotoPublicPath(customerPhoto.filename) : undefined;
+    const photoUrl = customerPhoto ? await saveCustomerPhoto(customerPhoto) : undefined;
     const customer = await this.tellerService.registerCustomer(dto, user, photoUrl);
     return { success: true, data: customer };
   }
@@ -134,7 +133,7 @@ export class TellerController {
     @Body() dto: UpdateCustomerDto,
     @UploadedFile() customerPhoto?: Express.Multer.File,
   ) {
-    const photoUrl = customerPhoto ? customerPhotoPublicPath(customerPhoto.filename) : undefined;
+    const photoUrl = customerPhoto ? await saveCustomerPhoto(customerPhoto) : undefined;
     const customer = await this.tellerService.updateCustomer(id, dto, photoUrl);
     return { success: true, data: customer };
   }
@@ -155,7 +154,7 @@ export class TellerController {
     @User() user: JwtPayload,
     @UploadedFile() childPhoto?: Express.Multer.File,
   ) {
-    const photoUrl = childPhoto ? childSavingsPhotoPublicPath(childPhoto.filename) : undefined;
+    const photoUrl = childPhoto ? await persistUploadedImage('child-savings', childPhoto) : undefined;
     const account = await this.tellerService.openAccount(dto, user, photoUrl);
     return { success: true, data: account };
   }
@@ -239,7 +238,7 @@ export class TellerController {
         'Collateral photo was not received. Use JPG or PNG under 5MB and try again.',
       );
     }
-    const photoUrl = collateralPhotoPublicPath(collateralPhoto.filename);
+    const photoUrl = await persistUploadedImage('collateral', collateralPhoto);
     const loan = await this.tellerService.createLoanApplication(dto, user, photoUrl);
     return { success: true, data: loan };
   }

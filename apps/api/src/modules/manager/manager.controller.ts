@@ -28,9 +28,9 @@ import { JwtAuthGuard, PermissionsGuard } from '../../common/guards/auth.guards'
 import { Permissions, User } from '../../common/decorators/auth.decorators';
 import {
   collateralPhotoFilter,
-  collateralPhotoPublicPath,
   collateralPhotoStorage,
 } from '../../common/utils/collateral-upload.util';
+import { persistUploadedImage } from '../../common/utils/object-storage.util';
 
 @ApiTags('Manager')
 @Controller('manager')
@@ -134,7 +134,7 @@ export class ManagerController {
         'Collateral photo was not received. Use JPG or PNG under 5MB and try again.',
       );
     }
-    const photoUrl = collateralPhotoPublicPath(collateralPhoto.filename);
+    const photoUrl = await persistUploadedImage('collateral', collateralPhoto);
     const loan = await this.managerService.createLoanApplication(dto, user, photoUrl);
     return { success: true, data: loan };
   }

@@ -22,6 +22,7 @@ import { formatCurrency, formatDate } from '@/lib/utils';
 import { primaryMemberAccountNumber } from '@/lib/member-id';
 import { useToast } from '@/components/ui/toast-provider';
 import { LoanDeletePanel } from '@/components/loans/loan-delete-panel';
+import { CollateralPhotoUpload } from '@/components/loans/collateral-photo-upload';
 
 interface LoanDetail {
   id: string;
@@ -124,6 +125,10 @@ export default function TellerLoanDetailPage() {
   const photoUrl = apiAssetUrl(loan.collateralPhotoUrl);
   const activities = Array.isArray(loan.businessActivities) ? loan.businessActivities : [];
   const canRecordRepayment = REPAYABLE.has(loan.status);
+  const showCollateralSection =
+    loan.product.requiresCollateral !== false ||
+    Boolean(loan.collateral || loan.guarantorName || loan.collateralPhotoUrl);
+  const canUpdateCollateralPhoto = !['REJECTED', 'CLOSED'].includes(loan.status);
 
   return (
     <DashboardLayout>
@@ -201,16 +206,20 @@ export default function TellerLoanDetailPage() {
           </Card>
         )}
 
-        {(loan.collateral || loan.guarantorName) && (
+        {showCollateralSection && (
           <Card className="mt-6 p-6">
             <h2 className="mb-4 font-semibold">Collateral & guarantor</h2>
             <div className="flex flex-col gap-4 lg:flex-row">
-              {photoUrl && (
-                <div className="h-32 w-32 shrink-0 overflow-hidden rounded-lg bg-gray-100">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
+              <div className="h-32 w-32 shrink-0 overflow-hidden rounded-lg border border-gray-200 bg-gray-100">
+                {photoUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
                   <img src={photoUrl} alt="Collateral" className="h-full w-full object-cover" />
-                </div>
-              )}
+                ) : (
+                  <div className="flex h-full items-center justify-center px-2 text-center text-xs text-gray-400">
+                    No photo on file
+                  </div>
+                )}
+              </div>
               <dl className="grid flex-1 gap-2 sm:grid-cols-2 text-sm">
                 {loan.collateralType && <div><dt className="text-gray-500">Type</dt><dd>{loan.collateralType}</dd></div>}
                 {loan.collateralEstimatedValue != null && (
@@ -222,6 +231,13 @@ export default function TellerLoanDetailPage() {
                 <div><dt className="text-gray-500">Verified</dt><dd>{collateralVerified ? formatDate(loan.collateralVerifiedAt!) : 'Pending'}</dd></div>
               </dl>
             </div>
+            {canUpdateCollateralPhoto && (
+              <CollateralPhotoUpload
+                loanId={id}
+                apiBasePath="/teller/loans"
+                onUpdated={load}
+              />
+            )}
           </Card>
         )}
 

@@ -255,6 +255,29 @@ export class TellerController {
     return { success: true, ...result };
   }
 
+  @Patch('loans/:id/collateral-photo')
+  @Permissions(Permission.CREATE_LOAN)
+  @ApiOperation({ summary: 'Upload or replace collateral photo on an existing loan' })
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(
+    FileInterceptor('collateralPhoto', {
+      storage: collateralPhotoStorage,
+      fileFilter: collateralPhotoFilter,
+      limits: { fileSize: 5 * 1024 * 1024 },
+    }),
+  )
+  async updateCollateralPhoto(
+    @Param('id') id: string,
+    @UploadedFile() collateralPhoto?: Express.Multer.File,
+  ) {
+    if (!collateralPhoto) {
+      throw new BadRequestException('Collateral photo is required');
+    }
+    const photoUrl = await persistUploadedImage('collateral', collateralPhoto);
+    const loan = await this.managerService.updateCollateralPhoto(id, photoUrl);
+    return { success: true, data: loan };
+  }
+
   @Get('loans/:id')
   @Permissions(Permission.VIEW_LOANS)
   @ApiOperation({ summary: 'Get a loan application (read-only for tellers)' })

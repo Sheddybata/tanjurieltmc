@@ -324,6 +324,39 @@ export class ManagerService {
     return this.getLoan(id);
   }
 
+  async updateCollateralPhoto(loanId: string, collateralPhotoUrl: string) {
+    const loan = await this.prisma.loan.findUnique({
+      where: { id: loanId },
+      select: { id: true, status: true, collateralVerifiedAt: true },
+    });
+    if (!loan) throw new NotFoundException('Loan not found');
+    if (loan.status === LoanStatus.REJECTED || loan.status === LoanStatus.CLOSED) {
+      throw new BadRequestException('Cannot update collateral photo on a closed or rejected loan');
+    }
+
+    const resetVerification =
+      Boolean(loan.collateralVerifiedAt) &&
+      ([LoanStatus.SUBMITTED, LoanStatus.UNDER_REVIEW, LoanStatus.APPROVED] as LoanStatus[]).includes(
+        loan.status,
+      );
+
+    await this.prisma.loan.update({
+      where: { id: loanId },
+      data: {
+        collateralPhotoUrl,
+        ...(resetVerification
+          ? {
+              collateralVerifiedAt: null,
+              collateralVerifiedById: null,
+              collateralVerificationNote: null,
+            }
+          : {}),
+      },
+    });
+
+    return this.getLoan(loanId);
+  }
+
   async verifyCollateral(id: string, user: JwtPayload, dto: LoanActionDto) {
     const loan = await this.getLoan(id);
     if (!loan.product.requiresCollateral) {

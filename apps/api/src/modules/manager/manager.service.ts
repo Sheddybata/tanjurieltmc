@@ -27,6 +27,7 @@ import {
   formatKoboAsDecimal,
   parseMoneyToKobo,
 } from '../../common/utils/money.util';
+import { withLoanDisplayMediaUrls } from '../../common/utils/display-media-url.util';
 import { LoanApplicationService } from '../loans/loan-application.service';
 import {
   AssignAccountOfficerDto,
@@ -281,7 +282,7 @@ export class ManagerService {
       },
     });
     if (!loan) throw new NotFoundException('Loan not found');
-    return loan;
+    return withLoanDisplayMediaUrls(loan);
   }
 
   async reviewLoan(id: string, user: JwtPayload, dto: LoanActionDto) {

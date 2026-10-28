@@ -30,6 +30,10 @@ import {
 
 } from '../../common/utils/reference.util';
 import { accountOfficerAssignmentData, accountOfficerCreateFields } from '../../common/utils/account-officer-assignment.util';
+import {
+  withDisplayMediaUrls,
+  withLoanDisplayMediaUrls,
+} from '../../common/utils/display-media-url.util';
 
 import { RegisterCustomerDto, OpenAccountDto, TransactionDto, EnableMobileAccessDto, LoanRepaymentDto, TellerTransferDto, TellerApplyLoanDto, TellerLoanQuoteDto } from './dto/teller.dto';
 
@@ -138,7 +142,7 @@ export class TellerService {
       });
     });
 
-    return customer;
+    return withDisplayMediaUrls(customer);
   }
 
   async updateCustomer(customerId: string, dto: UpdateCustomerDto, photoUrl?: string) {
@@ -274,7 +278,7 @@ export class TellerService {
       orderBy: { createdAt: 'desc' },
     });
 
-    return { ...customer, pendingRequests };
+    return withDisplayMediaUrls({ ...customer, pendingRequests });
   }
 
 
@@ -666,7 +670,7 @@ export class TellerService {
       },
     });
     if (!loan) throw new NotFoundException('Loan not found');
-    return loan;
+    return withLoanDisplayMediaUrls(loan);
   }
 }
 

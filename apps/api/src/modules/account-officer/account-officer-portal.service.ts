@@ -4,6 +4,7 @@ import { JwtPayload, UserRole } from '@tanjuriel/shared';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { ACCOUNT_OFFICER_LABELS } from '../../common/constants/account-officers.constant';
 import { paginate, paginationMeta } from '../../common/utils/reference.util';
+import { withDisplayMediaUrls } from '../../common/utils/display-media-url.util';
 
 const ACTIVE_LOAN_STATUSES: LoanStatus[] = [
   LoanStatus.DISBURSED,
@@ -171,6 +172,7 @@ export class AccountOfficerPortalService {
         city: true,
         state: true,
         kycStatus: true,
+        photoUrl: true,
         accountOfficerAssignedAt: true,
         accounts: {
           select: {
@@ -208,7 +210,7 @@ export class AccountOfficerPortalService {
       },
     });
     if (!customer) throw new NotFoundException('Customer not found in your portfolio');
-    return customer;
+    return withDisplayMediaUrls(customer);
   }
 
   async listLoanFollowUp(user: JwtPayload, filter: 'all' | 'overdue' | 'week' = 'all') {

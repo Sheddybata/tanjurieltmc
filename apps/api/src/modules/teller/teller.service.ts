@@ -10,7 +10,15 @@ import {
 
 } from '@nestjs/common';
 
-import { AccountStatus, AccountType, CustomerKycStatus, LoanStatus, PaymentChannel, RegistrationSource } from '@tanjuriel/database';
+import {
+  AccountStatus,
+  AccountType,
+  CustomerKycStatus,
+  LoanStatus,
+  PaymentChannel,
+  Prisma,
+  RegistrationSource,
+} from '@tanjuriel/database';
 
 import { JwtPayload } from '@tanjuriel/shared';
 
@@ -33,7 +41,6 @@ import { accountOfficerAssignmentData, accountOfficerCreateFields } from '../../
 import {
   withDisplayMediaUrls,
   withLoanDisplayMediaUrls,
-  withLoansDisplayMediaUrls,
 } from '../../common/utils/display-media-url.util';
 
 import { RegisterCustomerDto, OpenAccountDto, TransactionDto, EnableMobileAccessDto, LoanRepaymentDto, TellerTransferDto, TellerApplyLoanDto, TellerLoanQuoteDto } from './dto/teller.dto';
@@ -613,9 +620,39 @@ export class TellerService {
     return this.getLoan(loan.id);
   }
 
-  async getLoans(status?: LoanStatus, page = 1, limit = 20) {
+  private loanListWhere(status?: LoanStatus, search?: string): Prisma.LoanWhereInput {
+    const statusPart: Prisma.LoanWhereInput = status ? { status } : {};
+    const trimmed = search?.trim();
+    if (!trimmed) {
+      return statusPart;
+    }
+    return {
+      AND: [
+        statusPart,
+        {
+          OR: [
+            { loanNumber: { contains: trimmed, mode: 'insensitive' } },
+            { customer: { firstName: { contains: trimmed, mode: 'insensitive' } } },
+            { customer: { lastName: { contains: trimmed, mode: 'insensitive' } } },
+            { customer: { phone: { contains: trimmed } } },
+            {
+              customer: {
+                accounts: {
+                  some: { accountNumber: { contains: trimmed, mode: 'insensitive' } },
+                },
+              },
+            },
+            { product: { code: { contains: trimmed, mode: 'insensitive' } } },
+            { product: { name: { contains: trimmed, mode: 'insensitive' } } },
+          ],
+        },
+      ],
+    };
+  }
+
+  async getLoans(status?: LoanStatus, page = 1, limit = 20, search?: string) {
     const { skip, take, page: p, limit: l } = paginate(page, limit);
-    const where = status ? { status } : {};
+    const where = this.loanListWhere(status, search);
 
     const [loans, total] = await Promise.all([
       this.prisma.loan.findMany({
@@ -646,7 +683,7 @@ export class TellerService {
       this.prisma.loan.count({ where }),
     ]);
 
-    return { data: await withLoansDisplayMediaUrls(loans), meta: paginationMeta(total, p, l) };
+    return { data: loans, meta: paginationMeta(total, p, l) };
   }
 
   async getLoan(id: string) {

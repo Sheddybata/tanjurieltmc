@@ -250,8 +250,14 @@ export class TellerController {
     @Query('status') status?: LoanStatus,
     @Query('page') page?: number,
     @Query('limit') limit?: number,
+    @Query('search') search?: string,
   ) {
-    const result = await this.tellerService.getLoans(status, Number(page) || 1, Number(limit) || 20);
+    const result = await this.tellerService.getLoans(
+      status,
+      Number(page) || 1,
+      Number(limit) || 20,
+      search,
+    );
     return { success: true, ...result };
   }
 

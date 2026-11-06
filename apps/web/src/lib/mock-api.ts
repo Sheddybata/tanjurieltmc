@@ -408,16 +408,52 @@ export async function mockRequest<T>(
     return { success: true, data: { ...loan, schedules: [], customer: loan.customer, product: loan.product } } as T;
   }
 
-  if (endpoint.startsWith('/teller/loans') && method === 'GET') {
-    const status = new URLSearchParams(endpoint.split('?')[1] || '').get('status');
-    const data = status ? MOCK_LOANS.filter((l) => l.status === status) : MOCK_LOANS;
-    return { success: true, data } as T;
+  if (endpoint.startsWith('/teller/loans') && method === 'GET' && !endpoint.match(/\/teller\/loans\/[\w-]+/)) {
+    const qs = new URLSearchParams(endpoint.split('?')[1] || '');
+    const status = qs.get('status');
+    const page = Math.max(1, Number(qs.get('page')) || 1);
+    const limit = Math.min(100, Math.max(1, Number(qs.get('limit')) || 20));
+    const search = (qs.get('search') || '').trim().toLowerCase();
+    let data = status ? MOCK_LOANS.filter((l) => l.status === status) : [...MOCK_LOANS];
+    if (search) {
+      data = data.filter((l) => {
+        const name = `${l.customer.firstName} ${l.customer.lastName}`.toLowerCase();
+        return (
+          l.loanNumber.toLowerCase().includes(search) ||
+          name.includes(search) ||
+          l.customer.phone.includes(search)
+        );
+      });
+    }
+    const total = data.length;
+    const skip = (page - 1) * limit;
+    data = data.slice(skip, skip + limit);
+    const totalPages = Math.ceil(total / limit) || 1;
+    return { success: true, data, meta: { page, limit, total, totalPages } } as T;
   }
 
-  if (endpoint.startsWith('/manager/loans') && method === 'GET') {
-    const status = new URLSearchParams(endpoint.split('?')[1] || '').get('status');
-    const data = status ? MOCK_LOANS.filter((l) => l.status === status) : MOCK_LOANS;
-    return { success: true, data } as T;
+  if (endpoint.startsWith('/manager/loans') && method === 'GET' && !endpoint.match(/\/manager\/loans\/[\w-]+/)) {
+    const qs = new URLSearchParams(endpoint.split('?')[1] || '');
+    const status = qs.get('status');
+    const page = Math.max(1, Number(qs.get('page')) || 1);
+    const limit = Math.min(100, Math.max(1, Number(qs.get('limit')) || 20));
+    const search = (qs.get('search') || '').trim().toLowerCase();
+    let data = status ? MOCK_LOANS.filter((l) => l.status === status) : [...MOCK_LOANS];
+    if (search) {
+      data = data.filter((l) => {
+        const name = `${l.customer.firstName} ${l.customer.lastName}`.toLowerCase();
+        return (
+          l.loanNumber.toLowerCase().includes(search) ||
+          name.includes(search) ||
+          l.customer.phone.includes(search)
+        );
+      });
+    }
+    const total = data.length;
+    const skip = (page - 1) * limit;
+    data = data.slice(skip, skip + limit);
+    const totalPages = Math.ceil(total / limit) || 1;
+    return { success: true, data, meta: { page, limit, total, totalPages } } as T;
   }
 
   if (endpoint.startsWith('/manager/portfolio')) {
